@@ -10,6 +10,9 @@ import {rotinasCatalogo} from './pages/rotinas-catalogo.js';
 import {finopsPainel} from './pages/finops-painel.js';
 import {finopsIniciativas} from './pages/finops-iniciativas.js';
 import {finopsFaturas} from './pages/finops-faturas.js';
+import {despesasPainel} from './pages/despesas-painel.js';
+import {despesasInventario} from './pages/despesas-inventario.js';
+import {despesasOrcamento} from './pages/despesas-orcamento.js';
 import {perfis} from './pages/perfis.js';
 
 const el = id => document.getElementById(id);
@@ -24,6 +27,9 @@ registrarRotas({
     '/finops': finopsPainel,
     '/finops/iniciativas': finopsIniciativas,
     '/finops/faturas': finopsFaturas,
+    '/despesas': despesasPainel,
+    '/despesas/inventario': despesasInventario,
+    '/despesas/orcamento': despesasOrcamento,
     '/config/grupos': grupos,
     '/config/semanas': semanas,
     '/config/rotinas': rotinasCatalogo,

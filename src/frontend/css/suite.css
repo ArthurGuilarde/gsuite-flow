@@ -250,3 +250,59 @@ details.fonte summary{cursor:pointer;margin-bottom:10px}
   .kpi-valor{font-size:1.5rem}
 }
 @media print{.grafico-wrap{overflow:visible}.grafico{min-width:0}details.fonte:not([open])>*:not(summary){display:block}}
+
+/* Despesas */
+.g-recorrente{fill:var(--accent-dark)}
+.g-pontual{fill:var(--amber)}
+.alertas{border-left:4px solid var(--amber)}
+.alertas-urgente{border-left-color:var(--danger);background:#fef2f2}
+.alertas-atencao{background:#fffbeb}
+.lista-alertas{gap:0}
+.alerta{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.alerta:last-child{border-bottom:0}
+.alerta-valor{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.selo-nivel{font-size:.75rem;font-weight:700;border-radius:4px;padding:2px 8px;text-transform:uppercase;letter-spacing:.03em}
+.nivel-urgente{background:var(--danger);color:#fff}
+.nivel-atencao{background:var(--amber);color:#3b2a00}
+.aviso-renovacao{background:#fef2f2;border-left:4px solid var(--danger);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:.9rem}
+.kpi-estouro{border-left-color:var(--danger)}
+.kpi-estouro .kpi-valor{color:var(--danger)}
+.barras-h{gap:12px}
+.barra-h-topo{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.9rem;margin-bottom:4px}
+.barra-h-trilho{height:10px;border-radius:5px;background:#e6edf0;overflow:hidden}
+.barra-h-cheia{height:100%;border-radius:5px;background:var(--accent-dark)}
+.barra-categoria{background:var(--accent-dark)}
+.barra-em-revisao{background:#94a3b8}
+.barra-validado{background:var(--green-dark)}
+.barra-desperdicio{background:var(--amber)}
+.barra-cancelado{background:var(--danger)}
+.barra-renegociado{background:#6366f1}
+.dsp-em-revisao{background:#e6edf0;color:var(--primary)}
+.dsp-validado{background:#d1fae5;color:var(--green-dark)}
+.dsp-desperdicio{background:#fef3c7;color:var(--amber-dark)}
+.dsp-cancelado{background:#fee2e2;color:var(--danger)}
+.dsp-renegociado{background:#e0e7ff;color:#3730a3}
+.origem-fatura{background:#ccf3ee;color:var(--accent-dark)}
+.origem-contrato{background:#e6edf0;color:var(--primary)}
+.ren-urgente{background:var(--danger);color:#fff}
+.ren-atencao{background:#fef3c7;color:var(--amber-dark)}
+.ren-vencida{background:#fee2e2;color:var(--danger)}
+.iniciativas-vinculadas{margin-top:4px;font-size:.85rem}
+.tabela-despesas td.acoes,.tabela-orcamento td.acoes{white-space:normal;min-width:150px}
+.tabela-despesas td.acoes button{margin:2px 4px 2px 0}
+.tabela-orcamento input{width:100%;min-width:110px}
+.modal-largo{max-width:520px}
+.modal-largo h2{margin-bottom:4px}
+.formulario-modal input,.formulario-modal select,.formulario-modal textarea{width:100%;min-width:0}
+.previa-saving{background:#e6f6f4;border:1px solid #a7e3dc;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.linha-valor{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.linha-destaque strong{font-size:1.25rem;color:var(--primary)}
+.efeitos{margin:0;padding-left:20px}
+.formulario-despesa{display:flex;flex-direction:column;gap:14px}
+.formulario-despesa input,.formulario-despesa select,.formulario-despesa textarea{width:100%;min-width:0}
+.selo-despesa{background:#ccf3ee;color:var(--accent-dark);text-decoration:none}
+@media(max-width:800px){
+  .alerta{grid-template-columns:auto minmax(0,1fr)}
+  .alerta-valor{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between}
+}
+.tabela-despesas td:first-child{min-width:210px}

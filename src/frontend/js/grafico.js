@@ -113,3 +113,34 @@ export function legenda(itens) {
     }
     return ul;
 }
+
+// Despesas: barras mensais empilhadas (recorrente + pontual) sobre a linha do orçado (nulo interrompe a linha).
+export function graficoDespesas(serie) {
+    const valores = serie.flatMap(s => [(s.recorrente ?? 0) + (s.pontual ?? 0), s.orcado]).filter(v => v !== null && v !== undefined);
+    const teto = tetoBonito(Math.max(...valores, 0));
+    const total = serie.length || 1;
+    const {raiz, w, y} = moldura('Despesas por mês em reais: recorrentes e pontuais empilhadas, com a linha do orçado', teto);
+    const larg = w / total, barra = Math.max(4, Math.min(44, larg * 0.7));
+    serie.forEach((s, i) => {
+        const cx = MARGEM.e + larg * (i + 0.5);
+        const rec = Math.max(0, s.recorrente ?? 0), pon = Math.max(0, s.pontual ?? 0);
+        const grupo = svg('g', {class: 'g-coluna'}, dica(`${competencia(s.competencia, true)}\nRecorrente: ${moeda(s.recorrente)}\nPontual: ${moeda(s.pontual)}\nTotal: ${moeda(s.total)}\nOrçado: ${s.orcado === null || s.orcado === undefined ? 'não cadastrado' : moeda(s.orcado)}`));
+        if (rec > 0) grupo.append(svg('rect', {class: 'g-recorrente', x: cx - barra / 2, y: y(rec), width: barra, height: y(0) - y(rec)}));
+        if (pon > 0) grupo.append(svg('rect', {class: 'g-pontual', x: cx - barra / 2, y: y(rec + pon), width: barra, height: y(rec) - y(rec + pon)}));
+        grupo.append(svg('rect', {class: 'g-alvo', x: cx - larg / 2, y: MARGEM.t, width: larg, height: A - MARGEM.t - MARGEM.b}));
+        raiz.append(grupo);
+    });
+    let d = '', ativo = false;
+    serie.forEach((s, i) => {
+        if (s.orcado === null || s.orcado === undefined) { ativo = false; return; }
+        d += `${ativo ? 'L' : 'M'}${MARGEM.e + larg * (i + 0.5)} ${y(s.orcado)} `;
+        ativo = true;
+    });
+    if (d) raiz.append(svg('path', {class: 'g-linha g-orcado', d: d.trim()}));
+    serie.forEach((s, i) => {
+        if (s.orcado === null || s.orcado === undefined) return;
+        raiz.append(svg('circle', {class: 'g-ponto g-orcado', cx: MARGEM.e + larg * (i + 0.5), cy: y(s.orcado), r: 3.5}, dica(`${competencia(s.competencia, true)}: orçado ${moeda(s.orcado)}`)));
+    });
+    rotulosX(raiz, serie, MARGEM.e, larg);
+    return raiz;
+}
