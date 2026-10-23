@@ -16,6 +16,7 @@ Leia apenas o que a tarefa exige. Evite duplicar regras: cada documento abaixo �
 | [ADR-003 — porte em fases](adrs/ADR-003-porte-mvp-indicadores-em-fases.md) | Para entender o escopo por fases do porte do MVP |
 | [ADR-004 — rotinas: esforço e pendências](adrs/ADR-004-rotinas-esforco-e-pendencias.md) | Para entender esforço estimado/real, pendências e o painel de Rotinas |
 | [ADR-005 — FinOps: valor das decisões](adrs/ADR-005-finops-valor-das-decisoes.md) | Para entender iniciativas, janela de saving, perfis de custo/hora e ROI do módulo FinOps |
+| [ADR-006 — Despesas & Contratos](adrs/ADR-006-despesas-contratos-e-conversao.md) | Para entender inventário de despesas, orçamento mensal e conversão de cancelamento/renegociação em iniciativa FinOps |
 | [Master ADR](adrs/MASTER-ADR.md) | Antes de alterar decisões arquiteturais |
 | [Convenção de ADRs](adrs/README.md) | Para registrar decisões |
 | [Template de ADR](adrs/TEMPLATE-ADR.md) | Ao criar um ADR |

@@ -11,12 +11,13 @@ Acompanhar indicadores de engenharia: capacidade **BUILD ≥ 70% / RUN ≤ 30%**
 
 ## Escopo
 
-O porte é feito em fases ([ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md)); as Fases 2 e 3 estão registradas no [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md) e no [ADR-005](adrs/ADR-005-finops-valor-das-decisoes.md).
+O porte é feito em fases ([ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md)); as Fases 2, 3 e 4 estão registradas no [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md), no [ADR-005](adrs/ADR-005-finops-valor-das-decisoes.md) e no [ADR-006](adrs/ADR-006-despesas-contratos-e-conversao.md).
 
 - **Fase 1 (Capacidade):** grupos (squads), semanas/ciclos, lançamentos ABERTO/RESOLVIDO e dashboard BUILD × RUN.
 - **Fase 2 (Rotinas, em andamento):** catálogo de rotinas recorrentes, execução por semana/ocorrência, esforço estimado e real, pendências (vence hoje e atrasadas) e soma no painel BUILD × RUN pela categoria da rotina. Fora da fase: grade de agenda do MVP (A definir).
 - **Fase 3 (FinOps, em andamento):** iniciativas (melhoria, automação e otimização de custo) como fonte única de saving, janela de 6 meses até virar novo normal, perfis de custo/hora, investimento/ROI/payback, e fontes de custo com faturas (orçado × realizado) apenas para acompanhamento.
-- **Próximas fases:** Planner pessoal e Despesas & Contratos. A definir: ordem e regras detalhadas das fases 4–5.
+- **Fase 4 (Despesas & Contratos, em andamento):** inventário de despesas com status de auditoria, cancelar/renegociar como iniciativas vinculadas do FinOps (reversíveis), orçamento mensal opcional, ligação opcional com fonte de custo, alertas de renovação em 30/60 dias e painel de run-rate, desperdício e saving capturado.
+- **Próximas fases:** Planner pessoal. A definir: ordem e regras detalhadas da fase 5.
 - **Removido do MVP:** alias `/api` legado, `audit_log`, `/metrics/latest`, `/raw`, exportação HTML standalone e "copiar contexto LLM" (volta com Rotinas). Removidos também, no porte de Rotinas: grade de agenda e `bloco`, `data_especifica`, status no catálogo e o campo `recorrencia`. Removidos também, no porte de FinOps: tabela de meses cadastráveis (a competência é derivada de datas), histórico de saves como fonte de saving, busca "fabric" por nome, sincronização automática fatura→saving e Chart.js por CDN.
 
 ## Tenant e acesso
@@ -66,6 +67,17 @@ Termos da Fase 3 (FinOps):
 - **Fonte de custo e fatura:** a fatura é por (fonte, competência) com orçado opcional, realizado e métrica opcional; mostra variação (orçado − realizado) e custo unitário (realizado ÷ métrica). Faturas não somam saving; a otimização de uma fatura é uma iniciativa que aponta para a fonte. Excluir uma fonte remove suas faturas, mas é recusado se houver iniciativas vinculadas.
 - **Painel FinOps:** saving realizado (meses até a referência) e projetado (depois), saving em curso por mês (direto × horas do time), horas e FTE liberados, novo normal incorporado, ROI, série mensal, resumo por tipo, por fonte e por iniciativa. Competências são "AAAA-MM"; o intervalo máximo é de 36 meses.
 
+Termos da Fase 4 (Despesas & Contratos):
+
+- **Despesa:** item do inventário com nome, fornecedor, categoria (texto livre; sugeridas: SaaS & Ferramentas, Infraestrutura & Cloud, Consultoria & Terceiros, Licenças & Software, Pessoal & Treinamentos, Outros Serviços), tipo de custo RECORRENTE_MENSAL (valor mensal) ou PONTUAL (valor total, no mês de `data_inicio`), datas de início e renovação, responsável e observações.
+- **Status de auditoria:** EM_REVISAO (inicial), VALIDADO, DESPERDICIO, CANCELADO e RENEGOCIADO. CANCELADO e RENEGOCIADO só resultam das ações; o PATCH os recusa e, enquanto estiverem ativos, recusa mudar status, valor e tipo de custo (reverta antes).
+- **Custo mensal contratual:** PONTUAL = 0; CANCELADO a partir do mês da ação = 0; RENEGOCIADO antes do mês da ação = valor anterior; antes de `data_inicio` = 0; senão o valor.
+- **Custo mensal considerado:** se a despesa está ligada a uma fonte de custo e há fatura da fonte na competência, vale o realizado da fatura (origem FATURA); senão o contratual (origem CONTRATO). No mês de referência atual, sem fatura no mês usa-se a última fatura anterior da fonte, se houver.
+- **Cancelar e renegociar:** criam uma iniciativa OTIMIZACAO_CUSTO, DIRETO_REAIS (valor mensal = custo eliminado, ou valor anterior − novo na renegociação), com início no mês da ação, janela padrão de 6 meses (editável na ação) e a fonte de custo da despesa. Cancelar despesa PONTUAL só muda o status. **Reverter** apaga a iniciativa de conversão, restaura o valor e aplica o novo status (EM_REVISAO, VALIDADO ou DESPERDICIO). Excluir despesa com iniciativa vinculada é recusado (409); excluir iniciativa de conversão também (reverta pela despesa).
+- **Orçamento mensal:** valor por competência, opcional; o atalho "anual ÷ 12" distribui onze meses arredondados e dezembro com o resto. Variação = orçado − (run-rate mensal + pontuais do mês).
+- **Alertas de renovação:** despesas não canceladas com renovação de hoje até 60 dias: URGENTE até 30 dias, ATENCAO acima.
+- **Painel de despesas:** run-rate mensal e anual, pontuais do ano, desperdício mensal, saving capturado e novo normal (iniciativas vinculadas), orçado × realizado, % de auditoria (despesas fora de EM_REVISAO ÷ total), alertas, série mensal, por categoria e por status.
+
 ## Jornadas e critérios de aceite
 
 Fase 1:
@@ -92,7 +104,15 @@ Fase 3 (FinOps):
 5. **Demonstrar o efeito financeiro:** o painel mostra o saving por período e o ROI. Aceite: iniciativa em NOVO_NORMAL não soma saving no período.
 6. **Isolamento:** perfis, fontes, faturas, iniciativas e participantes de outro tenant nunca são visíveis nem referenciáveis (validado por testes de RLS e FK composta em PostgreSQL).
 
-A definir: critérios de aceite das fases 4–5.
+Fase 4 (Despesas & Contratos):
+
+1. **Inventariar:** com write, o usuário cadastra despesas e as audita. Aceite: valor negativo é recusado; status CANCELADO/RENEGOCIADO no cadastro ou no PATCH é recusado; fonte de outro tenant resulta em não encontrado.
+2. **Cancelar ou renegociar:** a ação cria a iniciativa vinculada. Aceite: despesa já cancelada ou renegociada resulta em conflito; renegociar exige recorrente e novo valor menor que o atual; reverter apaga a iniciativa e restaura o valor.
+3. **Orçar:** orçamento por competência, único por mês, com atalho anual ÷ 12. Aceite: sem orçamento, o painel e o inventário funcionam normalmente.
+4. **Não perder renovações:** o painel destaca renovações em até 60 dias. Aceite: URGENTE até 30 dias; canceladas não aparecem.
+5. **Isolamento:** despesas e orçamentos de outro tenant nunca são visíveis nem referenciáveis (validado por testes de RLS e FK composta em PostgreSQL).
+
+A definir: critérios de aceite da fase 5.
 
 ## Restrições e integrações
 
@@ -100,4 +120,4 @@ Base técnica: FastAPI, SQLAlchemy 2, Alembic e frontend vanilla (ES modules, CS
 
 ## Pendências
 
-Permanecem "A definir": perfis de usuário, regras de ingresso específicas, metas configuráveis por tenant, metas de esforço de rotinas, grade de agenda, feriados (os dias úteis os ignoram), fuso horário por tenant (hoje é o relógio do servidor), moeda além de BRL, fechamento contábil, fluxo de aprovação de iniciativas e regras detalhadas das fases 4–5. Registre dúvidas bloqueantes na tarefa; decisões arquiteturais ficam no Master ADR.
+Permanecem "A definir": perfis de usuário, regras de ingresso específicas, metas configuráveis por tenant, metas de esforço de rotinas, grade de agenda, feriados (os dias úteis os ignoram), fuso horário por tenant (hoje é o relógio do servidor), moeda além de BRL, fechamento contábil, fluxo de aprovação de iniciativas e de despesas, despesas recorrentes anuais, multi-moeda, cancelamento de despesa pontual com saving e regras detalhadas da fase 5. Registre dúvidas bloqueantes na tarefa; decisões arquiteturais ficam no Master ADR.

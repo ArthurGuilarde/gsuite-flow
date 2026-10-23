@@ -582,6 +582,146 @@ def test_finops_cascades_and_fonte_with_iniciativa_is_protected(db_factory):
         assert db.execute(text("SELECT count(*) FROM faturas")).scalar() == 0
 
 
+DESPESAS_TABLES = ("despesas", "orcamentos_despesas")
+
+
+def add_despesa(db, tenant, nome="Licenca", fonte_id=None):
+    despesa_id = uuid4()
+    db.execute(
+        text(
+            "INSERT INTO despesas(id,tenant_id,created_by,nome,categoria,tipo_custo,valor,status_auditoria,fonte_id) "
+            "VALUES (:id,:tenant,'user',:nome,'Outros Servicos','RECORRENTE_MENSAL',300,'EM_REVISAO',:fonte)"
+        ),
+        {"id": despesa_id, "tenant": tenant, "nome": nome, "fonte": fonte_id},
+    )
+    return despesa_id
+
+
+def add_orcamento(db, tenant, competencia="2026-01-01"):
+    orcamento_id = uuid4()
+    db.execute(
+        text(
+            "INSERT INTO orcamentos_despesas(id,tenant_id,created_by,competencia,valor) "
+            "VALUES (:id,:tenant,'user',:competencia,1000)"
+        ),
+        {"id": orcamento_id, "tenant": tenant, "competencia": competencia},
+    )
+    return orcamento_id
+
+
+def add_iniciativa_despesa(db, tenant, despesa_id, titulo="Cancelamento"):
+    iniciativa_id = uuid4()
+    db.execute(
+        text(
+            "INSERT INTO iniciativas"
+            "(id,tenant_id,created_by,titulo,tipo,modo_calculo,valor_mensal,mes_inicio,despesa_id,conversao_despesa) "
+            "VALUES (:id,:tenant,'user',:titulo,'OTIMIZACAO_CUSTO','DIRETO_REAIS',300,'2026-01-01',:despesa,true)"
+        ),
+        {"id": iniciativa_id, "tenant": tenant, "titulo": titulo, "despesa": despesa_id},
+    )
+    return iniciativa_id
+
+
+def seed_despesas(db, tenant, sufixo="1"):
+    context(db, tenant)
+    fonte = add_fonte(db, tenant, f"Fonte {sufixo}")
+    despesa = add_despesa(db, tenant, f"Despesa {sufixo}", fonte)
+    add_orcamento(db, tenant)
+    add_iniciativa_despesa(db, tenant, despesa)
+    return fonte, despesa
+
+
+def test_despesas_tables_force_rls_and_not_owned_by_runtime(db_factory):
+    with db_factory.begin() as db:
+        for table in DESPESAS_TABLES:
+            flags = db.execute(
+                text("SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname=:t"), {"t": table}
+            ).one()
+            assert tuple(flags) == (True, True), table
+            owned = db.execute(
+                text("SELECT tableowner=current_user FROM pg_tables WHERE tablename=:t"), {"t": table}
+            ).scalar()
+            assert owned is False, table
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        db.execute(text("ALTER TABLE despesas DISABLE ROW LEVEL SECURITY"))
+
+
+def test_despesas_unfiltered_select_sees_only_current_tenant(db_factory):
+    a, b = uuid4(), uuid4()
+    for tenant, sufixo in [(a, "A"), (b, "B")]:
+        with db_factory.begin() as db:
+            seed_despesas(db, tenant, sufixo)
+    with db_factory.begin() as db:
+        context(db, a)
+        for table in DESPESAS_TABLES:
+            assert db.execute(text(f"SELECT tenant_id FROM {table}")).scalars().all() == [a], table  # noqa: S608
+    with db_factory.begin() as db:
+        for table in DESPESAS_TABLES:
+            assert db.execute(text(f"SELECT count(*) FROM {table}")).scalar() == 0, table  # noqa: S608
+
+
+def test_despesas_insert_with_other_tenant_denied(db_factory):
+    tenant, other = uuid4(), uuid4()
+    inserts = [
+        lambda db: add_despesa(db, other, "Outra"),
+        lambda db: add_orcamento(db, other),
+    ]
+    for insert_row in inserts:
+        with pytest.raises(DBAPIError), db_factory.begin() as db:
+            context(db, tenant)
+            insert_row(db)
+
+
+def test_despesas_composite_fk_blocks_cross_tenant_fonte_and_iniciativa(db_factory):
+    a, b = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        fonte_a, despesa_a = seed_despesas(db, a, "A")
+    with db_factory.begin() as db:
+        context(db, b)
+        fonte_b = add_fonte(db, b, "Fonte B")
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, b)
+        add_despesa(db, b, "Aponta para fonte de A", fonte_a)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, b)
+        add_iniciativa_despesa(db, b, despesa_a, "Aponta para despesa de A")
+    with db_factory.begin() as db:
+        context(db, b)
+        despesa_b = add_despesa(db, b, "Despesa B", fonte_b)
+        add_iniciativa_despesa(db, b, despesa_b)
+
+
+def test_despesas_orcamento_is_unique_per_competencia(db_factory):
+    a = uuid4()
+    with db_factory.begin() as db:
+        seed_despesas(db, a)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, a)
+        add_orcamento(db, a, "2026-01-01")
+    with db_factory.begin() as db:
+        context(db, a)
+        add_orcamento(db, a, "2026-02-01")
+        assert db.execute(text("SELECT count(*) FROM orcamentos_despesas")).scalar() == 2
+
+
+def test_despesas_with_iniciativa_or_fonte_link_are_protected(db_factory):
+    a = uuid4()
+    with db_factory.begin() as db:
+        fonte, despesa = seed_despesas(db, a)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, a)
+        db.execute(text("DELETE FROM despesas WHERE id=:id"), {"id": despesa})
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, a)
+        db.execute(text("DELETE FROM iniciativas WHERE despesa_id=:id"), {"id": despesa})
+        db.execute(text("DELETE FROM fontes_custo WHERE id=:id"), {"id": fonte})
+    with db_factory.begin() as db:
+        context(db, a)
+        db.execute(text("DELETE FROM iniciativas WHERE despesa_id=:id"), {"id": despesa})
+        assert db.execute(text("DELETE FROM despesas WHERE id=:id"), {"id": despesa}).rowcount == 1
+        assert db.execute(text("DELETE FROM fontes_custo WHERE id=:id"), {"id": fonte}).rowcount == 1
+
+
 def test_capacidade_api_authorized_flow(db_factory, monkeypatch):
     from fastapi.testclient import TestClient
 

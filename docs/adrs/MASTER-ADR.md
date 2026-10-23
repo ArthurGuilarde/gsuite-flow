@@ -27,6 +27,8 @@
 
 | 005 | [FinOps: valor financeiro das decisões](ADR-005-finops-valor-das-decisoes.md) | 2026-10-23 | ✅ Aceito | Produto e domínio | Iniciativas como fonte única de saving, janela padrão de 6 meses até virar novo normal, faturas só acompanham, perfis de custo/hora com snapshot, ROI/payback e gráficos SVG locais. |
 
+| 006 | [Despesas & Contratos: inventário, orçamento e conversão em iniciativa](ADR-006-despesas-contratos-e-conversao.md) | 2026-10-23 | ✅ Aceito | Produto e domínio | Inventário com auditoria, cancelar/renegociar criam iniciativa vinculada (reversível), orçamento mensal opcional com anual ÷ 12, ligação opcional despesa→fonte de custo e alertas de renovação 30/60 dias. |
+
 ## Mapa de Dependências
 
 ADR-002 usa a estrutura de partida descrita em [ADR-001](ADR-001-base-minima-sem-dominio.md), sem alterar seu status.
@@ -36,6 +38,8 @@ ADR-003 depende de [ADR-001](ADR-001-base-minima-sem-dominio.md) e [ADR-002](ADR
 ADR-004 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md).
 
 ADR-005 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md).
+
+ADR-006 depende de [ADR-005](ADR-005-finops-valor-das-decisoes.md) e [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md).
 
 ## Índice por Área
 
@@ -52,6 +56,7 @@ ADR-005 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md).
 - [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md) — Porte do MVP Indicadores de Engenharia em fases
 - [ADR-004](ADR-004-rotinas-esforco-e-pendencias.md) — Rotinas: esforço medido e pendências
 - [ADR-005](ADR-005-finops-valor-das-decisoes.md) — FinOps: valor financeiro das decisões
+- [ADR-006](ADR-006-despesas-contratos-e-conversao.md) — Despesas & Contratos: inventário, orçamento e conversão em iniciativa
 
 ## Como Criar um Novo ADR
 

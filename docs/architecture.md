@@ -37,6 +37,12 @@ Decisão em [ADR-005](adrs/ADR-005-finops-valor-das-decisoes.md). Mesmas camadas
 
 Tabelas (migração `0004_finops`): `perfis_custo`, `fontes_custo`, `faturas`, `iniciativas` e `iniciativa_participantes`, com `id` UUID, `tenant_id` e `created_by`. `faturas` referencia a fonte e `iniciativa_participantes` referencia a iniciativa por chaves estrangeiras compostas `(tenant_id, id)` com `ON DELETE CASCADE`; `iniciativas` referencia a fonte sem cascata (o serviço responde 409 ao excluir fonte com iniciativas). No PostgreSQL as cinco têm ENABLE/FORCE RLS com USING e WITH CHECK. Os gráficos do frontend são SVG locais, compatíveis com a CSP.
 
+## Domínio Despesas & Contratos (Fase 4)
+
+Decisão em [ADR-006](adrs/ADR-006-despesas-contratos-e-conversao.md). Mesmas camadas dos domínios anteriores. O cálculo (custo contratual e considerado, pontuais, alertas de renovação, % de auditoria e orçamento anual ÷ 12) fica em `services/despesas_calculos.py`, módulo puro sem I/O; as ações cancelar, renegociar e reverter rodam numa única transação do serviço e criam ou apagam a iniciativa de conversão no FinOps.
+
+Tabelas (migração `0005_despesas`): `despesas` e `orcamentos_despesas`, com `id` UUID, `tenant_id` e `created_by`, e as colunas `despesa_id` e `conversao_despesa` em `iniciativas`. `despesas` referencia a fonte de custo e `iniciativas` referencia a despesa por chaves estrangeiras compostas `(tenant_id, id)` sem cascata (o serviço responde 409 ao excluir despesa com iniciativas e fonte com despesas); `orcamentos_despesas` é único por (tenant, competência). No PostgreSQL as duas tabelas novas têm ENABLE/FORCE RLS com USING e WITH CHECK.
+
 ## Desenvolvimento isolado
 
 O perfil dev usa um adaptador de identidade/grants com fixtures locais, sem criar um provedor OIDC falso. A sessão opaca, CSRF e verificação de tenant continuam no mesmo fluxo da aplicação. Configuração e middleware limitam esse adaptador ao ambiente development e ao loopback; endpoints locais não são montados em OIDC/produção.
