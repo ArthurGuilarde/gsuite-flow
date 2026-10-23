@@ -368,6 +368,46 @@ def orcamento_anual(db: Session, ctx: TenantContext, dados: OrcamentoAnualIn) ->
     return {"criados": criados, "atualizados": atualizados, "ignorados": ignorados}
 
 
+def _alertas_renovacao(despesas: Iterable[Despesa], custo_ref: dict[UUID, Decimal], hoje: date) -> list[dict[str, Any]]:
+    """Alertas de renovação (URGENTE/ATENCAO) ordenados por data; regra única do painel e do Meu Dia."""
+    alertas: list[dict[str, Any]] = []
+    for d in despesas:
+        alerta = dc.alerta_renovacao(d.status_auditoria, d.data_renovacao, hoje)
+        if alerta is not None and d.data_renovacao is not None:
+            dias, nivel = alerta
+            alertas.append(
+                {
+                    "id": d.id,
+                    "nome": d.nome,
+                    "fornecedor": d.fornecedor,
+                    "data_renovacao": d.data_renovacao,
+                    "dias": dias,
+                    "nivel": nivel,
+                    "custo_mensal": fc.q2(custo_ref[d.id]),
+                    "status_auditoria": d.status_auditoria,
+                }
+            )
+    alertas.sort(key=lambda a: (a["data_renovacao"], a["nome"]))
+    return alertas
+
+
+def renovacoes_urgentes(db: Session, ctx: TenantContext, hoje: date) -> list[dict[str, Any]]:
+    """Contratos não cancelados com renovação em até 30 dias (alerta URGENTE) a partir de `hoje`."""
+    candidatas = [
+        d
+        for d in repo.listar_despesas(db, ctx.tenant_id)
+        if (a := dc.alerta_renovacao(d.status_auditoria, d.data_renovacao, hoje)) is not None and a[1] == dc.URGENTE
+    ]
+    fonte_ids = {d.fonte_id for d in candidatas if d.fonte_id}
+    faturas = _faturas_por_fonte(repo.listar_faturas_das_fontes(db, ctx.tenant_id, fonte_ids))
+    ref = fc.primeiro_dia(hoje)
+    custo_ref = {d.id: _considerado(d, ref, faturas, referencia=True).valor for d in candidatas}
+    return [
+        {k: a[k] for k in ("id", "nome", "fornecedor", "data_renovacao", "dias", "custo_mensal")}
+        for a in _alertas_renovacao(candidatas, custo_ref, hoje)
+    ]
+
+
 # --- painel -----------------------------------------------------------------------------------------------------
 
 
@@ -411,24 +451,7 @@ def dashboard(db: Session, ctx: TenantContext, referencia: date | None, hoje: da
         contagem[d.status_auditoria] += 1
         custo_status[d.status_auditoria] += custo_ref[d.id]
 
-    alertas: list[dict[str, Any]] = []
-    for d in despesas:
-        alerta = dc.alerta_renovacao(d.status_auditoria, d.data_renovacao, h)
-        if alerta is not None and d.data_renovacao is not None:
-            dias, nivel = alerta
-            alertas.append(
-                {
-                    "id": d.id,
-                    "nome": d.nome,
-                    "fornecedor": d.fornecedor,
-                    "data_renovacao": d.data_renovacao,
-                    "dias": dias,
-                    "nivel": nivel,
-                    "custo_mensal": fc.q2(custo_ref[d.id]),
-                    "status_auditoria": d.status_auditoria,
-                }
-            )
-    alertas.sort(key=lambda a: (a["data_renovacao"], a["nome"]))
+    alertas = _alertas_renovacao(despesas, custo_ref, h)
 
     categorias: dict[str, list[Despesa]] = defaultdict(list)
     for d in despesas:
