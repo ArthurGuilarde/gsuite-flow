@@ -17,6 +17,7 @@ import {perfis} from './pages/perfis.js';
 import {meuDia} from './pages/meu-dia.js';
 import {demandas} from './pages/demandas.js';
 import {demandasTriagem} from './pages/demandas-triagem.js';
+import {demandaDetalhe} from './pages/demandas-detalhe.js';
 
 const el = id => document.getElementById(id);
 const status = message => { el('status').textContent = message; };
@@ -36,6 +37,7 @@ registrarRotas({
     '/despesas/orcamento': despesasOrcamento,
     '/demandas': demandas,
     '/demandas/triagem': demandasTriagem,
+    '/demandas/:id': demandaDetalhe,
     '/config/grupos': grupos,
     '/config/semanas': semanas,
     '/config/rotinas': rotinasCatalogo,

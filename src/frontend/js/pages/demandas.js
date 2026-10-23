@@ -54,7 +54,7 @@ export const demandas = {
             lista.replaceChildren(h('div', {class: 'tabela-wrap'}, h('table', {},
                 h('thead', {}, h('tr', {}, ['Título', 'Prioridade', 'Status', 'Grupo', 'Aberta em', escrita ? 'Ações' : null].map(t => t && h('th', {text: t})))),
                 h('tbody', {}, itens.map(d => h('tr', {},
-                    h('td', {}, h('strong', {text: d.titulo}), d.descricao ? h('div', {class: 'texto-suave dem-descricao', text: d.descricao}) : null),
+                    h('td', {}, h('a', {href: `#/demandas/${d.id}`, class: 'dem-link'}, h('strong', {text: d.titulo})), d.descricao ? h('div', {class: 'texto-suave dem-descricao', text: d.descricao}) : null),
                     h('td', {}, badgePrioridade(d.prioridade)),
                     h('td', {}, badgeStatus(d.status)),
                     h('td', {text: d.grupo_nome ?? '—'}),

@@ -400,3 +400,13 @@ details.fonte summary{cursor:pointer;margin-bottom:10px}
 .badge-dem-cancelada{background:#e6edf0;color:var(--muted)}
 .dem-triagem-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .dem-triagem-acoes select{min-width:180px}
+
+.dem-link{color:var(--primary);text-decoration:none}
+.dem-link:hover{text-decoration:underline}
+.dem-meta{display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.dem-linha{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.dem-evento{border-left:3px solid var(--border);padding:2px 0 2px 12px;font-size:.9rem;color:var(--muted)}
+.dem-comentario{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;max-width:720px}
+.dem-comentario-topo{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-bottom:4px}
+.dem-comentario-texto{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+.dem-contador{font-size:.8rem;color:var(--muted)}

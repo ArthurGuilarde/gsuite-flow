@@ -57,7 +57,7 @@ export const demandasTriagem = {
                     await acao(d, 'cancelar', 'Demanda cancelada.');
                 }}}, 'Cancelar'));
             return h('section', {class: 'cartao dem-triagem-item'},
-                h('div', {class: 'cartao-topo'}, h('strong', {text: d.titulo}), badgePrioridade(d.prioridade)),
+                h('div', {class: 'cartao-topo'}, h('a', {href: `#/demandas/${d.id}`, class: 'dem-link'}, h('strong', {text: d.titulo})), badgePrioridade(d.prioridade)),
                 d.descricao ? h('p', {class: 'dem-descricao', text: d.descricao}) : null,
                 h('p', {class: 'texto-suave', text: `Aberta em ${dataHora(d.created_at)} por ${d.solicitante_sub}`}),
                 form);

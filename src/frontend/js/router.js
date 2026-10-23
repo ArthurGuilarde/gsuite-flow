@@ -9,6 +9,26 @@ export function registrarRotas(definicoes) {
 
 export const caminhoAtual = () => location.hash.replace(/^#/, '') || '/';
 
+function resolver(caminho) {
+    const exata = rotas.get(caminho);
+    if (exata) return {rota: exata, params: {}};
+    const partes = caminho.split('/');
+    for (const [padrao, rota] of rotas) {
+        if (!padrao.includes('/:')) continue;
+        const modelo = padrao.split('/');
+        if (modelo.length !== partes.length) continue;
+        const params = {};
+        const casa = modelo.every((parte, i) => {
+            if (!parte.startsWith(':')) return parte === partes[i];
+            if (!partes[i]) return false;
+            params[parte.slice(1)] = decodeURIComponent(partes[i]);
+            return true;
+        });
+        if (casa) return {rota, params};
+    }
+    return {rota: undefined, params: {}};
+}
+
 function marcarAtivo(caminho) {
     for (const link of document.querySelectorAll('[data-rota]')) {
         const ativo = link.dataset.rota === caminho;
@@ -33,8 +53,8 @@ export async function renderizar() {
     encerrar();
     if (!alvo) return;
     const caminho = caminhoAtual();
-    const rota = rotas.get(caminho);
-    marcarAtivo(caminho);
+    const {rota, params} = resolver(caminho);
+    marcarAtivo(rota?.ativo ?? caminho);
     alvo.replaceChildren();
     document.getElementById('pagina-titulo').textContent = rota?.titulo ?? 'Página não encontrada';
     document.getElementById('pagina-subtitulo').textContent = rota?.subtitulo ?? '';
@@ -50,7 +70,7 @@ export async function renderizar() {
     const meu = new AbortController();
     controle = meu;
     try {
-        const resultado = await rota.render(alvo, meu.signal);
+        const resultado = await rota.render(alvo, meu.signal, params);
         if (meu.signal.aborted) { try { resultado?.(); } catch { /* ignora */ } return; }
         if (typeof resultado === 'function') limpeza = resultado;
     } catch (erro) {
