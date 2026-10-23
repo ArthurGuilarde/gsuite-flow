@@ -1,10 +1,12 @@
 from collections.abc import Sequence
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.backend.models.capacidade import Grupo, Lancamento, Semana
+from src.backend.models.demandas import Demanda
 
 
 def listar_grupos(db: Session, tenant_id: UUID, *, somente_ativos: bool = False) -> Sequence[Grupo]:
@@ -62,3 +64,20 @@ def obter_lancamento_por_chave(
         Lancamento.status == status,
     )
     return db.scalars(stmt).first()
+
+
+def obter_grupo_sistema(db: Session, tenant_id: UUID) -> Grupo | None:
+    return db.scalars(select(Grupo).where(Grupo.tenant_id == tenant_id, Grupo.sistema.is_(True))).first()
+
+
+def contar_demandas_do_grupo(db: Session, tenant_id: UUID, grupo_id: UUID) -> int:
+    stmt = select(func.count()).select_from(Demanda).where(Demanda.tenant_id == tenant_id, Demanda.grupo_id == grupo_id)
+    return int(db.scalar(stmt) or 0)
+
+
+def listar_demandas_painel(db: Session, tenant_id: UUID) -> Sequence[tuple[UUID, str, datetime, datetime | None]]:
+    """(grupo_id, status, created_at, concluido_em) das demandas ABERTA e CONCLUIDA, para o painel."""
+    stmt = select(Demanda.grupo_id, Demanda.status, Demanda.created_at, Demanda.concluido_em).where(
+        Demanda.tenant_id == tenant_id, Demanda.status.in_(("ABERTA", "CONCLUIDA"))
+    )
+    return [(r[0], r[1], r[2], r[3]) for r in db.execute(stmt).all()]

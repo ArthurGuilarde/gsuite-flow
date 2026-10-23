@@ -84,12 +84,12 @@ def nova_semana(c, ident="S1", tenant=TENANT_A, **extra):
 def test_grupos_crud(client):
     g = novo_grupo(client, "Projetos", "build")
     assert g["categoria"] == "BUILD" and g["icone"] == "📋" and g["cor"] == "#64748B" and g["ativo"] is True
-    assert [x["id"] for x in get(client, "/grupos").json()] == [g["id"]]
+    assert [x["id"] for x in get(client, "/grupos").json() if not x["sistema"]] == [g["id"]]
     r = send(client, "PATCH", f"/grupos/{g['id']}", {"cor": "#00AE9D", "ativo": False, "categoria": "run"})
     assert r.status_code == 200
     assert (r.json()["cor"], r.json()["ativo"], r.json()["categoria"]) == ("#00AE9D", False, "RUN")
     assert send(client, "DELETE", f"/grupos/{g['id']}").status_code == 204
-    assert get(client, "/grupos").json() == []
+    assert [x["nome"] for x in get(client, "/grupos").json()] == ["Triagem"]
     assert send(client, "DELETE", f"/grupos/{g['id']}").status_code == 404
 
 
@@ -115,7 +115,7 @@ def test_grupos_padrao_idempotente(client):
     r = send(client, "POST", "/grupos/padrao")
     assert r.status_code == 200 and r.json() == {"created": 5, "skipped": 1}
     assert send(client, "POST", "/grupos/padrao").json() == {"created": 0, "skipped": 6}
-    assert len(get(client, "/grupos").json()) == 6
+    assert len(get(client, "/grupos").json()) == 7  # 6 padrão + Triagem (sistema)
 
 
 def test_semanas_crud_e_validacoes(client):
@@ -237,7 +237,7 @@ def test_dashboard(client):
         )
     todas = get(client, "/dashboard").json()
     assert todas["periodo"] == "Todas as semanas" and todas["semana_id"] is None
-    assert todas["total"] == 12 and [g["nome"] for g in todas["groups"]] == ["B", "R"]
+    assert todas["total"] == 12 and [g["nome"] for g in todas["groups"]] == ["B", "R", "Triagem"]
     uma = get(client, f"/dashboard?semana_id={s1['id']}").json()
     assert uma["periodo"] == "S1" and uma["total"] == 10
     assert uma["perc_build"] == 0.7 and uma["build_atingiu_meta"] and uma["run_atingiu_meta"]
@@ -318,12 +318,12 @@ def test_isolamento_entre_tenants(client):
         ).status_code
         == 404
     )
-    assert [x["id"] for x in get(client, "/grupos", TENANT_B).json()] == [gb["id"]]
+    assert [x["id"] for x in get(client, "/grupos", TENANT_B).json() if not x["sistema"]] == [gb["id"]]
     assert [x["id"] for x in get(client, "/semanas", TENANT_B).json()] == [sb["id"]]
     assert get(client, "/lancamentos", TENANT_B).json() == []
     assert get(client, f"/dashboard?semana_id={s['id']}", TENANT_B).status_code == 404
     dash = get(client, "/dashboard", TENANT_B).json()
-    assert dash["total"] == 0 and [x["id"] for x in dash["groups"]] == [gb["id"]]
+    assert dash["total"] == 0 and [x["id"] for x in dash["groups"] if x["nome"] != "Triagem"] == [gb["id"]]
     # Nada mudou em A; mesmo nome é permitido em outro tenant.
     assert get(client, "/dashboard").json()["total"] == 5
     assert novo_grupo(client, "GB", tenant=TENANT_A)["nome"] == "GB"
@@ -351,7 +351,7 @@ def test_leitor_nao_escreve(client, grants):
     )
     for metodo, caminho, corpo in escritas:
         assert send(client, metodo, caminho, corpo).status_code == 403, (metodo, caminho)
-    assert len(get(client, "/grupos").json()) == 1
+    assert len([x for x in get(client, "/grupos").json() if not x["sistema"]]) == 1
 
 
 def test_escrita_exige_csrf_e_origin(client):

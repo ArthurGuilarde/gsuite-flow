@@ -120,6 +120,7 @@ class GrupoView(_View):
     icone: str
     cor: str
     ativo: bool
+    sistema: bool
     created_at: datetime
 
 
@@ -166,6 +167,8 @@ class GrupoDashboard(BaseModel):
     cor: str
     abertos: int
     resolvidos: int
+    demandas_abertas: int
+    demandas_resolvidas: int
     total: int
     taxa_resolucao: float
     pct_aberto: float

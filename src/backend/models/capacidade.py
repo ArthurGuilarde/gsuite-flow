@@ -26,12 +26,20 @@ class Grupo(TenantRecord):
         CheckConstraint("categoria IN ('BUILD','RUN')", name="ck_grupos_categoria"),
         UniqueConstraint("tenant_id", "id", name="uq_grupos_tenant_id"),
         UniqueConstraint("tenant_id", "nome", name="uq_grupos_tenant_nome"),
+        Index(
+            "uq_grupos_sistema",
+            "tenant_id",
+            unique=True,
+            sqlite_where=text("sistema"),
+            postgresql_where=text("sistema"),
+        ),
     )
     nome: Mapped[str] = mapped_column(String(120), nullable=False)
     categoria: Mapped[str] = mapped_column(String(5), nullable=False)
     icone: Mapped[str] = mapped_column(String(16), nullable=False, default="📋", server_default="📋")
     cor: Mapped[str] = mapped_column(String(7), nullable=False, default="#64748B", server_default="#64748B")
     ativo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+    sistema: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
 
 
 class Semana(TenantRecord):

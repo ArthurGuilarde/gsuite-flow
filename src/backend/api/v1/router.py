@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from src.backend.api.deps import read_context
 from src.backend.api.v1.capacidade import router as capacidade_router
+from src.backend.api.v1.demandas import router as demandas_router
 from src.backend.api.v1.despesas import router as despesas_router
 from src.backend.api.v1.finops import router as finops_router
 from src.backend.api.v1.planner import router as planner_router
@@ -14,6 +15,7 @@ api_v1_router.include_router(rotinas_router)
 api_v1_router.include_router(finops_router)
 api_v1_router.include_router(despesas_router)
 api_v1_router.include_router(planner_router)
+api_v1_router.include_router(demandas_router)
 
 
 @api_v1_router.get("/context", response_model=ContextView, tags=["workspace"])

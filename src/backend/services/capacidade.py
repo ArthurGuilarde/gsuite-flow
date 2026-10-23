@@ -1,5 +1,5 @@
-from collections.abc import Iterable, Sequence
-from datetime import date
+from collections.abc import Iterable, Mapping, Sequence
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -27,6 +27,9 @@ META_BUILD_MIN = 0.70
 META_RUN_MAX = 0.30
 ABERTO = "ABERTO"
 RESOLVIDO = "RESOLVIDO"
+TRIAGEM_NOME = "Triagem"
+TRIAGEM_ICONE = "📥"
+TRIAGEM_COR = "#64748B"
 
 GRUPOS_PADRAO: tuple[dict[str, str], ...] = (
     {"nome": "EngDados - Projetos", "categoria": "BUILD", "icone": "🚀", "cor": "#00AE9D"},
@@ -39,6 +42,36 @@ GRUPOS_PADRAO: tuple[dict[str, str], ...] = (
 
 
 # --- cálculo puro -----------------------------------------------------------------------------------------------
+
+
+def _data_do_servidor(momento: datetime) -> date:
+    """Data no fuso do servidor; valores sem fuso (SQLite) são UTC."""
+    if momento.tzinfo is None:
+        momento = momento.replace(tzinfo=UTC)
+    return momento.astimezone().date()
+
+
+def contar_demandas_por_grupo(
+    demandas: Iterable[tuple[UUID, str, datetime, datetime | None]], semana: Semana | None = None
+) -> dict[UUID, tuple[int, int]]:
+    """Conta (abertas, resolvidas) por grupo. ABERTA conta pela data de abertura e CONCLUIDA pela de conclusão.
+
+    Sem semana: todas. Semana sem datas: nenhuma. Com datas: só as que caem em [data_inicio, data_fim].
+    """
+    inicio = fim = None
+    if semana is not None:
+        if semana.data_inicio is None or semana.data_fim is None:
+            return {}
+        inicio, fim = semana.data_inicio, semana.data_fim
+    contagem: dict[UUID, list[int]] = {}
+    for grupo_id, status, criada_em, concluida_em in demandas:
+        concluida = status == "CONCLUIDA"
+        referencia = concluida_em if concluida else criada_em
+        if inicio is not None and fim is not None:
+            if referencia is None or not (inicio <= _data_do_servidor(referencia) <= fim):
+                continue
+        contagem.setdefault(grupo_id, [0, 0])[1 if concluida else 0] += 1
+    return {gid: (v[0], v[1]) for gid, v in contagem.items()}
 
 
 def _ratio(parte: int, total: int) -> float:
@@ -54,12 +87,13 @@ def calcular_dashboard(
     lancamentos: Iterable[Lancamento],
     semana: Semana | None = None,
     rotinas: dict[str, dict[str, int]] | None = None,
+    demandas: Mapping[UUID, tuple[int, int]] | None = None,
 ) -> dict[str, Any]:
     """Agrega BUILD x RUN em Python sobre entidades já carregadas (somente grupos ativos).
 
     Se `semana` vier informada, os lançamentos devem ser os dessa semana; caso contrário, de todas.
     `rotinas` é a saída de `resumo_esforco`: ocorrências pendentes contam como abertas e concluídas como resolvidas,
-    pela categoria da própria rotina.
+    pela categoria da própria rotina. `demandas` mapeia grupo para (abertas, resolvidas) e soma aos lançamentos.
     """
     ativos = sorted((g for g in grupos if g.ativo), key=lambda g: (g.categoria, g.nome))
     abertos_por_grupo: dict[UUID, int] = {g.id: 0 for g in ativos}
@@ -73,7 +107,9 @@ def calcular_dashboard(
     itens: list[dict[str, Any]] = []
     totais = {"BUILD": [0, 0], "RUN": [0, 0]}  # [abertos, resolvidos]
     for g in ativos:
-        abertos, resolvidos = abertos_por_grupo[g.id], resolvidos_por_grupo[g.id]
+        dem_abertas, dem_resolvidas = (demandas or {}).get(g.id, (0, 0))
+        abertos = abertos_por_grupo[g.id] + dem_abertas
+        resolvidos = resolvidos_por_grupo[g.id] + dem_resolvidas
         total = abertos + resolvidos
         totais[g.categoria][0] += abertos
         totais[g.categoria][1] += resolvidos
@@ -86,6 +122,8 @@ def calcular_dashboard(
                 "cor": g.cor,
                 "abertos": abertos,
                 "resolvidos": resolvidos,
+                "demandas_abertas": dem_abertas,
+                "demandas_resolvidas": dem_resolvidas,
                 "total": total,
                 "taxa_resolucao": _arred(_ratio(resolvidos, total) * 100, 1),
                 "pct_aberto": _arred(_ratio(abertos, total) * 100, 1),
@@ -221,17 +259,55 @@ def _views(db: Session, ctx: TenantContext, itens: Sequence[Lancamento]) -> list
 
 
 def dashboard(db: Session, ctx: TenantContext, semana_id: UUID | None) -> dict[str, Any]:
+    garantir_triagem(db, ctx)
     semana = _semana_ou_404(db, ctx, semana_id) if semana_id is not None else None
     grupos = repo.listar_grupos(db, ctx.tenant_id, somente_ativos=True)
     lancamentos = repo.listar_lancamentos(db, ctx.tenant_id, semana_id=semana_id)
     resumo = rotinas_service.resumo_para_painel(db, ctx, semana, date.today())
-    return calcular_dashboard(grupos, lancamentos, semana, resumo)
+    demandas = contar_demandas_por_grupo(repo.listar_demandas_painel(db, ctx.tenant_id), semana)
+    return calcular_dashboard(grupos, lancamentos, semana, resumo, demandas)
 
 
 # --- grupos -----------------------------------------------------------------------------------------------------
 
 
+def garantir_triagem(db: Session, ctx: TenantContext) -> Grupo:
+    """Garante o grupo de sistema Triagem (RUN) do tenant; idempotente e tolerante a corrida."""
+    existente = repo.obter_grupo_sistema(db, ctx.tenant_id)
+    if existente is not None:
+        return existente
+    adotado = repo.obter_grupo_por_nome(db, ctx.tenant_id, TRIAGEM_NOME)
+    if adotado is not None:
+        adotado.sistema = True
+        adotado.categoria = "RUN"
+        adotado.ativo = True
+        db.flush()
+        return adotado
+    novo = Grupo(
+        tenant_id=ctx.tenant_id,
+        created_by=ctx.sub,
+        nome=TRIAGEM_NOME,
+        categoria="RUN",
+        icone=TRIAGEM_ICONE,
+        cor=TRIAGEM_COR,
+        ativo=True,
+        sistema=True,
+    )
+    try:
+        with db.begin_nested():
+            db.add(novo)
+            db.flush()
+    except IntegrityError:
+        existente = repo.obter_grupo_sistema(db, ctx.tenant_id)
+        if existente is None:
+            raise
+        return existente
+    db.refresh(novo)
+    return novo
+
+
 def listar_grupos(db: Session, ctx: TenantContext) -> Sequence[Grupo]:
+    garantir_triagem(db, ctx)
     return repo.listar_grupos(db, ctx.tenant_id)
 
 
@@ -263,6 +339,10 @@ def criar_grupos_padrao(db: Session, ctx: TenantContext) -> dict[str, int]:
 def atualizar_grupo(db: Session, ctx: TenantContext, grupo_id: UUID, dados: GrupoUpdate) -> Grupo:
     grupo = _grupo_ou_404(db, ctx, grupo_id)
     campos = dados.model_dump(exclude_unset=True)
+    if grupo.sistema and any(
+        campos.get(nome) is not None and campos[nome] != getattr(grupo, nome) for nome in ("nome", "categoria", "ativo")
+    ):
+        raise ConflictError("Grupo de sistema não pode ser renomeado, desativado nem mudar de categoria")
     if campos.get("nome") is not None:
         outro = repo.obter_grupo_por_nome(db, ctx.tenant_id, campos["nome"])
         if outro is not None and outro.id != grupo.id:
@@ -275,7 +355,12 @@ def atualizar_grupo(db: Session, ctx: TenantContext, grupo_id: UUID, dados: Grup
 
 
 def remover_grupo(db: Session, ctx: TenantContext, grupo_id: UUID) -> None:
-    db.delete(_grupo_ou_404(db, ctx, grupo_id))
+    grupo = _grupo_ou_404(db, ctx, grupo_id)
+    if grupo.sistema:
+        raise ConflictError("Grupo de sistema não pode ser excluído")
+    if repo.contar_demandas_do_grupo(db, ctx.tenant_id, grupo.id) > 0:
+        raise ConflictError("Grupo com demandas não pode ser excluído: reclassifique as demandas")
+    db.delete(grupo)
     db.flush()
 
 

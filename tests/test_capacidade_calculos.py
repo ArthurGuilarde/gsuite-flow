@@ -1,7 +1,14 @@
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
-from src.backend.services.capacidade import GRUPOS_PADRAO, META_BUILD_MIN, META_RUN_MAX, calcular_dashboard
+from src.backend.services.capacidade import (
+    GRUPOS_PADRAO,
+    META_BUILD_MIN,
+    META_RUN_MAX,
+    calcular_dashboard,
+    contar_demandas_por_grupo,
+)
 
 
 def grupo(nome, categoria, ativo=True):
@@ -153,3 +160,58 @@ def test_rotinas_sem_grupos_e_com_run():
     assert [x["categoria"] for x in r["rotinas"]] == ["RUN"]
     assert (r["qtd_run"], r["resolvidos_run"], r["perc_run"], r["run_atingiu_meta"]) == (3, 3, 1.0, False)
     assert r["taxa_resolucao"] == 100.0
+
+
+def test_demandas_somam_aos_abertos_e_resolvidos_do_grupo():
+    b, r_, off = grupo("B", "BUILD"), grupo("R", "RUN"), grupo("Off", "RUN", ativo=False)
+    demandas = {b.id: (2, 1), r_.id: (0, 3), off.id: (9, 9)}
+    r = calcular_dashboard([b, r_, off], [lanc(b, "ABERTO", 1)], demandas=demandas)
+    gb, gr = r["groups"]
+    assert (gb["abertos"], gb["resolvidos"], gb["demandas_abertas"], gb["demandas_resolvidas"]) == (3, 1, 2, 1)
+    assert (gr["abertos"], gr["resolvidos"], gr["demandas_abertas"], gr["demandas_resolvidas"]) == (0, 3, 0, 3)
+    assert (r["abertos_build"], r["resolvidos_build"], r["abertos_run"], r["resolvidos_run"]) == (3, 1, 0, 3)
+    assert (r["total_abertos"], r["total_resolvidos"], r["total"]) == (3, 4, 7)
+
+
+def test_sem_demandas_os_campos_ficam_zerados():
+    g = grupo("A", "BUILD")
+    item = calcular_dashboard([g], [])["groups"][0]
+    assert (item["demandas_abertas"], item["demandas_resolvidas"]) == (0, 0)
+
+
+def dem(grupo_, status, criada, concluida=None):
+    return (grupo_.id, status, criada, concluida)
+
+
+def test_contar_demandas_sem_semana_soma_abertas_e_concluidas():
+    g = grupo("A", "BUILD")
+    agora = datetime(2026, 3, 4, 12, tzinfo=UTC)
+    linhas = [dem(g, "ABERTA", agora), dem(g, "ABERTA", agora), dem(g, "CONCLUIDA", agora, agora)]
+    assert contar_demandas_por_grupo(linhas) == {g.id: (2, 1)}
+    assert contar_demandas_por_grupo([]) == {}
+
+
+def test_contar_demandas_por_periodo_da_semana():
+    g = grupo("A", "BUILD")
+    semana = SimpleNamespace(data_inicio=date(2026, 3, 2), data_fim=date(2026, 3, 8))
+    dentro = datetime(2026, 3, 4, 12, tzinfo=UTC)
+    fora = datetime(2026, 2, 10, 12, tzinfo=UTC)
+    linhas = [
+        dem(g, "ABERTA", dentro),
+        dem(g, "ABERTA", fora),
+        dem(g, "CONCLUIDA", fora, dentro),  # conta pela conclusão
+        dem(g, "CONCLUIDA", dentro, fora),  # aberta dentro, concluída fora: não conta
+        dem(g, "CONCLUIDA", dentro.replace(tzinfo=None), dentro.replace(tzinfo=None)),  # SQLite: naive = UTC
+    ]
+    assert contar_demandas_por_grupo(linhas, semana) == {g.id: (1, 2)}
+
+
+def test_contar_demandas_semana_sem_datas_nao_conta_nada():
+    g = grupo("A", "BUILD")
+    agora = datetime(2026, 3, 4, 12, tzinfo=UTC)
+    linhas = [dem(g, "ABERTA", agora), dem(g, "CONCLUIDA", agora, agora)]
+    for semana in (
+        SimpleNamespace(data_inicio=None, data_fim=None),
+        SimpleNamespace(data_inicio=date(2026, 3, 2), data_fim=None),
+    ):
+        assert contar_demandas_por_grupo(linhas, semana) == {}

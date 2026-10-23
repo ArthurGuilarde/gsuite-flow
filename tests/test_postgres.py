@@ -904,6 +904,136 @@ def test_capacidade_api_authorized_flow(db_factory, monkeypatch):
     created = client.post("/api/v1/grupos", json={"nome": "Projetos", "categoria": "BUILD"}, headers=headers)
     assert created.status_code == 201
     assert created.json()["nome"] == "Projetos"
-    assert [g["nome"] for g in client.get("/api/v1/grupos", headers=headers).json()] == ["Projetos"]
+    assert [g["nome"] for g in client.get("/api/v1/grupos", headers=headers).json()] == ["Projetos", "Triagem"]
     assert client.get("/api/v1/dashboard", headers=headers).status_code == 200
     assert client.get("/api/v1/grupos", headers={"X-Tenant-ID": str(uuid4())}).status_code == 403
+
+
+def add_grupo_sistema(db, tenant, nome="Triagem"):
+    grupo_id = uuid4()
+    db.execute(
+        text(
+            "INSERT INTO grupos(id,tenant_id,created_by,nome,categoria,sistema) "
+            "VALUES (:id,:tenant,'user',:nome,'RUN',true)"
+        ),
+        {"id": grupo_id, "tenant": tenant, "nome": nome},
+    )
+    return grupo_id
+
+
+def add_demanda(db, tenant, grupo_id, titulo="Preciso de acesso", status="ABERTA", prioridade="MEDIA", concluida=None):
+    demanda_id = uuid4()
+    if concluida is None:
+        concluida = status == "CONCLUIDA"
+    db.execute(
+        text(
+            "INSERT INTO demandas(id,tenant_id,created_by,grupo_id,titulo,prioridade,status,"
+            "solicitante_sub,concluido_em) "
+            "VALUES (:id,:tenant,'user',:grupo,:titulo,:prioridade,:status,'user',"
+            "CASE WHEN CAST(:concluida AS boolean) THEN now() END)"
+        ),
+        {
+            "id": demanda_id,
+            "tenant": tenant,
+            "grupo": grupo_id,
+            "titulo": titulo,
+            "prioridade": prioridade,
+            "status": status,
+            "concluida": concluida,
+        },
+    )
+    return demanda_id
+
+
+def seed_demandas(db, tenant, sufixo="1"):
+    context(db, tenant)
+    grupo = add_grupo(db, tenant, f"Grupo {sufixo}")
+    return grupo, add_demanda(db, tenant, grupo, f"Demanda {sufixo}")
+
+
+def test_demandas_table_forces_rls_and_not_owned_by_runtime(db_factory):
+    with db_factory.begin() as db:
+        flags = db.execute(
+            text("SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname='demandas'")
+        ).one()
+        assert tuple(flags) == (True, True)
+        owned = db.execute(text("SELECT tableowner=current_user FROM pg_tables WHERE tablename='demandas'")).scalar()
+        assert owned is False
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        db.execute(text("ALTER TABLE demandas DISABLE ROW LEVEL SECURITY"))
+
+
+def test_demandas_unfiltered_select_sees_only_current_tenant(db_factory):
+    a, b = uuid4(), uuid4()
+    for tenant, sufixo in [(a, "A"), (b, "B")]:
+        with db_factory.begin() as db:
+            seed_demandas(db, tenant, sufixo)
+    with db_factory.begin() as db:
+        context(db, a)
+        assert db.execute(text("SELECT tenant_id FROM demandas")).scalars().all() == [a]
+    with db_factory.begin() as db:
+        assert db.execute(text("SELECT count(*) FROM demandas")).scalar() == 0
+
+
+def test_demandas_insert_with_other_tenant_denied(db_factory):
+    tenant, other = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        context(db, other)
+        grupo_other = add_grupo(db, other, "Do outro")
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, tenant)
+        add_demanda(db, other, grupo_other)
+
+
+def test_demandas_composite_fk_blocks_cross_tenant_grupo(db_factory):
+    a, b = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        grupo_a, _ = seed_demandas(db, a, "A")
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, b)
+        add_demanda(db, b, grupo_a, "Aponta para grupo de A")
+    with db_factory.begin() as db:
+        context(db, b)
+        add_demanda(db, b, add_grupo(db, b, "Grupo B"))
+
+
+def test_demandas_grupo_with_demandas_is_protected_and_constraints_hold(db_factory):
+    tenant = uuid4()
+    with db_factory.begin() as db:
+        grupo, demanda = seed_demandas(db, tenant)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, tenant)
+        db.execute(text("DELETE FROM grupos WHERE id=:id"), {"id": grupo})
+    for kwargs in (
+        {"status": "OUTRO"},
+        {"status": "TRIAGEM"},
+        {"prioridade": "URGENTE"},
+        {"status": "CONCLUIDA", "concluida": False},
+        {"status": "ABERTA", "concluida": True},
+    ):
+        with pytest.raises(DBAPIError), db_factory.begin() as db:
+            context(db, tenant)
+            add_demanda(db, tenant, grupo, **kwargs)
+    with db_factory.begin() as db:
+        context(db, tenant)
+        add_demanda(db, tenant, grupo, status="CONCLUIDA")
+        add_demanda(db, tenant, grupo, status="CANCELADA")
+        db.execute(text("DELETE FROM demandas WHERE tenant_id=:t"), {"t": tenant})
+        assert db.execute(text("DELETE FROM grupos WHERE id=:id"), {"id": grupo}).rowcount == 1
+    assert demanda
+
+
+def test_grupos_only_one_system_grupo_per_tenant(db_factory):
+    a, b = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        context(db, a)
+        add_grupo_sistema(db, a)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, a)
+        add_grupo_sistema(db, a, "Outro de sistema")
+    with db_factory.begin() as db:
+        context(db, a)
+        add_grupo(db, a, "Comum")
+    with db_factory.begin() as db:
+        context(db, b)
+        add_grupo_sistema(db, b)
