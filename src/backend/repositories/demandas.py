@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import case, select
 from sqlalchemy.orm import Session
 
-from src.backend.models.demandas import Demanda
+from src.backend.models.demandas import Demanda, DemandaEvento
 
 _RANK = case((Demanda.prioridade == "ALTA", 0), (Demanda.prioridade == "MEDIA", 1), else_=2)
 
@@ -29,3 +29,8 @@ def listar_demandas(
     if solicitante_sub is not None:
         stmt = stmt.where(Demanda.solicitante_sub == solicitante_sub)
     return db.scalars(stmt.order_by(_RANK, Demanda.created_at, Demanda.id)).all()
+
+
+def listar_eventos(db: Session, tenant_id: UUID, demanda_id: UUID) -> Sequence[DemandaEvento]:
+    stmt = select(DemandaEvento).where(DemandaEvento.tenant_id == tenant_id, DemandaEvento.demanda_id == demanda_id)
+    return db.scalars(stmt.order_by(DemandaEvento.created_at, DemandaEvento.id)).all()

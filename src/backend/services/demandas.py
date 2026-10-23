@@ -2,16 +2,16 @@
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from src.backend.core.exceptions import ConflictError, NotFoundError
-from src.backend.models.demandas import Demanda
+from src.backend.models.demandas import Demanda, DemandaEvento
 from src.backend.repositories import capacidade as grupos_repo
 from src.backend.repositories import demandas as repo
-from src.backend.schemas.demandas import ClassificarIn, DemandaCreate
+from src.backend.schemas.demandas import ClassificarIn, ComentarioCreate, DemandaCreate
 from src.backend.services.capacidade import garantir_triagem
 from src.backend.tenancy.context import TenantContext
 
@@ -57,6 +57,29 @@ def _view(demanda: Demanda, nomes: dict[UUID, str]) -> dict[str, Any]:
     }
 
 
+def _evento(
+    db: Session,
+    ctx: TenantContext,
+    demanda: Demanda,
+    tipo: str,
+    texto: str | None = None,
+    grupo_nome: str | None = None,
+    quando: datetime | None = None,
+) -> DemandaEvento:
+    evento = DemandaEvento(
+        tenant_id=ctx.tenant_id,
+        created_by=ctx.sub,
+        created_at=quando or _agora(),
+        demanda_id=demanda.id,
+        tipo=tipo,
+        autor_sub=ctx.sub,
+        texto=texto,
+        grupo_nome=grupo_nome,
+    )
+    db.add(evento)
+    return evento
+
+
 def _salvar(db: Session, ctx: TenantContext, demanda: Demanda) -> dict[str, Any]:
     db.flush()
     db.refresh(demanda)
@@ -66,6 +89,7 @@ def _salvar(db: Session, ctx: TenantContext, demanda: Demanda) -> dict[str, Any]
 def abrir_demanda(db: Session, ctx: TenantContext, body: DemandaCreate) -> dict[str, Any]:
     triagem = garantir_triagem(db, ctx)
     demanda = Demanda(
+        id=uuid4(),
         tenant_id=ctx.tenant_id,
         created_by=ctx.sub,
         grupo_id=triagem.id,
@@ -76,6 +100,7 @@ def abrir_demanda(db: Session, ctx: TenantContext, body: DemandaCreate) -> dict[
         solicitante_sub=ctx.sub,
     )
     db.add(demanda)
+    _evento(db, ctx, demanda, "ABERTURA")
     return _salvar(db, ctx, demanda)
 
 
@@ -111,6 +136,7 @@ def classificar(db: Session, ctx: TenantContext, demanda_id: UUID, body: Classif
         demanda.prioridade = body.prioridade
     demanda.classificado_por = ctx.sub
     demanda.classificado_em = _agora()
+    _evento(db, ctx, demanda, "CLASSIFICACAO", grupo_nome=grupo.nome, quando=demanda.classificado_em)
     return _salvar(db, ctx, demanda)
 
 
@@ -122,6 +148,7 @@ def concluir(db: Session, ctx: TenantContext, demanda_id: UUID) -> dict[str, Any
     demanda.status = CONCLUIDA
     demanda.concluido_por = ctx.sub
     demanda.concluido_em = _agora()
+    _evento(db, ctx, demanda, "CONCLUSAO", quando=demanda.concluido_em)
     return _salvar(db, ctx, demanda)
 
 
@@ -133,6 +160,7 @@ def reabrir(db: Session, ctx: TenantContext, demanda_id: UUID) -> dict[str, Any]
     demanda.status = ABERTA
     demanda.concluido_por = None
     demanda.concluido_em = None
+    _evento(db, ctx, demanda, "REABERTURA")
     return _salvar(db, ctx, demanda)
 
 
@@ -143,4 +171,22 @@ def cancelar(db: Session, ctx: TenantContext, demanda_id: UUID) -> dict[str, Any
         raise ConflictError("Só demandas abertas podem ser canceladas")
     demanda.status = CANCELADA
     demanda.cancelado_em = _agora()
+    _evento(db, ctx, demanda, "CANCELAMENTO", quando=demanda.cancelado_em)
     return _salvar(db, ctx, demanda)
+
+
+def historico(db: Session, ctx: TenantContext, demanda_id: UUID) -> list[DemandaEvento]:
+    garantir_triagem(db, ctx)
+    demanda = _demanda_ou_404(db, ctx, demanda_id)
+    return list(repo.listar_eventos(db, ctx.tenant_id, demanda.id))
+
+
+def comentar(db: Session, ctx: TenantContext, demanda_id: UUID, body: ComentarioCreate) -> DemandaEvento:
+    garantir_triagem(db, ctx)
+    demanda = _demanda_ou_404(db, ctx, demanda_id)
+    if demanda.status == CANCELADA:
+        raise ConflictError("Demandas canceladas não aceitam comentários")
+    evento = _evento(db, ctx, demanda, "COMENTARIO", texto=body.texto)
+    db.flush()
+    db.refresh(evento)
+    return evento

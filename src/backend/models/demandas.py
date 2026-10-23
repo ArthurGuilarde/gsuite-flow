@@ -38,3 +38,27 @@ class Demanda(TenantRecord):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+
+
+class DemandaEvento(TenantRecord):
+    __tablename__ = "demanda_historico"
+    __table_args__ = (
+        CheckConstraint(
+            "tipo IN ('ABERTURA','CLASSIFICACAO','CONCLUSAO','REABERTURA','CANCELAMENTO','COMENTARIO')",
+            name="ck_demanda_historico_tipo",
+        ),
+        CheckConstraint("(tipo <> 'COMENTARIO') OR (texto IS NOT NULL)", name="ck_demanda_historico_texto"),
+        ForeignKeyConstraint(
+            ["tenant_id", "demanda_id"],
+            ["demandas.tenant_id", "demandas.id"],
+            name="fk_demanda_historico_demanda",
+            ondelete="CASCADE",
+        ),
+        UniqueConstraint("tenant_id", "id", name="uq_demanda_historico_tenant_id"),
+        Index("ix_demanda_historico_tenant_demanda", "tenant_id", "demanda_id", "created_at"),
+    )
+    demanda_id: Mapped[UUID] = mapped_column(nullable=False)
+    tipo: Mapped[str] = mapped_column(String(12), nullable=False)
+    autor_sub: Mapped[str] = mapped_column(String(255), nullable=False)
+    texto: Mapped[str | None] = mapped_column(Text, nullable=True)
+    grupo_nome: Mapped[str | None] = mapped_column(String(120), nullable=True)

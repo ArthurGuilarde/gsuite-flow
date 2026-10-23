@@ -1023,6 +1023,65 @@ def test_demandas_grupo_with_demandas_is_protected_and_constraints_hold(db_facto
     assert demanda
 
 
+def add_evento(db, tenant, demanda_id, tipo="COMENTARIO", texto="Oi"):
+    db.execute(
+        text(
+            "INSERT INTO demanda_historico(id,tenant_id,created_by,demanda_id,tipo,autor_sub,texto) "
+            "VALUES (:id,:tenant,'user',:demanda,:tipo,'user',:texto)"
+        ),
+        {"id": uuid4(), "tenant": tenant, "demanda": demanda_id, "tipo": tipo, "texto": texto},
+    )
+
+
+def test_demanda_historico_forces_rls_and_not_owned_by_runtime(db_factory):
+    with db_factory.begin() as db:
+        flags = db.execute(
+            text("SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname='demanda_historico'")
+        ).one()
+        assert tuple(flags) == (True, True)
+        owned = db.execute(
+            text("SELECT tableowner=current_user FROM pg_tables WHERE tablename='demanda_historico'")
+        ).scalar()
+        assert owned is False
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        db.execute(text("ALTER TABLE demanda_historico DISABLE ROW LEVEL SECURITY"))
+
+
+def test_demanda_historico_other_tenant_sees_nothing_and_insert_denied(db_factory):
+    a, b = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        _, demanda_a = seed_demandas(db, a, "A")
+        add_evento(db, a, demanda_a)
+    with db_factory.begin() as db:
+        context(db, a)
+        assert db.execute(text("SELECT count(*) FROM demanda_historico")).scalar() == 1
+    with db_factory.begin() as db:
+        context(db, b)
+        assert db.execute(text("SELECT count(*) FROM demanda_historico")).scalar() == 0
+    with db_factory.begin() as db:
+        assert db.execute(text("SELECT count(*) FROM demanda_historico")).scalar() == 0
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, b)
+        add_evento(db, a, demanda_a)
+
+
+def test_demanda_historico_composite_fk_blocks_cross_tenant_and_cascades(db_factory):
+    a, b = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        _, demanda_a = seed_demandas(db, a, "A")
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, b)
+        add_evento(db, b, demanda_a)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, a)
+        add_evento(db, a, demanda_a, tipo="COMENTARIO", texto=None)
+    with db_factory.begin() as db:
+        context(db, a)
+        add_evento(db, a, demanda_a)
+        db.execute(text("DELETE FROM demandas WHERE id=:id"), {"id": demanda_a})
+        assert db.execute(text("SELECT count(*) FROM demanda_historico")).scalar() == 0
+
+
 def test_grupos_only_one_system_grupo_per_tenant(db_factory):
     a, b = uuid4(), uuid4()
     with db_factory.begin() as db:

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from src.backend.api.deps import read_context, read_db, write_context, write_db
-from src.backend.schemas.demandas import ClassificarIn, DemandaCreate, DemandaView
+from src.backend.schemas.demandas import ClassificarIn, ComentarioCreate, DemandaCreate, DemandaView, EventoView
 from src.backend.services import demandas as service
 from src.backend.tenancy.context import TenantContext
 
@@ -31,6 +31,16 @@ def listar_demandas(
 @router.get("/{demanda_id}", response_model=DemandaView)
 def obter_demanda(demanda_id: UUID, db: ReadDB, ctx: ReadContext):
     return service.obter_demanda(db, ctx, demanda_id)
+
+
+@router.get("/{demanda_id}/historico", response_model=list[EventoView])
+def historico(demanda_id: UUID, db: ReadDB, ctx: ReadContext):
+    return service.historico(db, ctx, demanda_id)
+
+
+@router.post("/{demanda_id}/comentarios", response_model=EventoView, status_code=201)
+def comentar(demanda_id: UUID, body: ComentarioCreate, db: ReadDB, ctx: ReadContext):
+    return service.comentar(db, ctx, demanda_id, body)
 
 
 @router.post("/{demanda_id}/classificar", response_model=DemandaView)

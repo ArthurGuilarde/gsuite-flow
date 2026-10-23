@@ -70,7 +70,7 @@ def db_factory(postgres):
             text(
                 "TRUNCATE tenant_test_records, browser_sessions, planner_itens, planner_dias, "
                 "rotina_execucoes, rotinas, lancamentos, semanas, grupos, iniciativa_participantes, "
-                "iniciativas, despesas, orcamentos_despesas, demandas, "
+                "iniciativas, despesas, orcamentos_despesas, demanda_historico, demandas, "
                 "faturas, fontes_custo, perfis_custo"
             )
         )

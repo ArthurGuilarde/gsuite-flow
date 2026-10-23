@@ -55,3 +55,21 @@ class DemandaView(BaseModel):
     concluido_por: str | None
     concluido_em: datetime | None
     cancelado_em: datetime | None
+
+
+class ComentarioCreate(_Entrada):
+    texto: str = Field(min_length=1, max_length=5000)
+
+    _texto = field_validator("texto")(_texto)
+
+
+class EventoView(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    demanda_id: UUID
+    tipo: str
+    autor_sub: str
+    texto: str | None
+    grupo_nome: str | None
+    created_at: datetime | None

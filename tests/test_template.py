@@ -25,6 +25,7 @@ def test_template_domain_is_only_capacidade():
         "planner_dias",
         "planner_itens",
         "demandas",
+        "demanda_historico",
     }
     paths = app.openapi()["paths"]
     assert "/api/v1/context" in paths

@@ -459,6 +459,92 @@ def test_painel_ignora_grupo_inativo(client):
     assert p["total"] == 0
 
 
+# --- histórico e comentários -------------------------------------------------------------------------------------
+
+
+def historico(c, d, tenant=TENANT_A):
+    return get(c, f"/{d['id']}/historico", tenant)
+
+
+def comentar(c, d, texto, tenant=TENANT_A):
+    return send(c, "POST", f"/{d['id']}/comentarios", {"texto": texto}, tenant)
+
+
+def test_historico_registra_acoes_em_ordem(client, who):
+    g = grupo(client, "Suporte")
+    d = demanda(client)
+    who["sub"] = "user-b"
+    classificar(client, d, g)
+    who["sub"] = "user-c"
+    send(client, "POST", f"/{d['id']}/concluir")
+    who["sub"] = "user-d"
+    send(client, "POST", f"/{d['id']}/reabrir")
+    who["sub"] = "user-e"
+    send(client, "POST", f"/{d['id']}/cancelar")
+    r = historico(client, d)
+    assert r.status_code == 200
+    eventos = r.json()
+    assert [(e["tipo"], e["autor_sub"], e["grupo_nome"]) for e in eventos] == [
+        ("ABERTURA", "user-a", None),
+        ("CLASSIFICACAO", "user-b", "Suporte"),
+        ("CONCLUSAO", "user-c", None),
+        ("REABERTURA", "user-d", None),
+        ("CANCELAMENTO", "user-e", None),
+    ]
+    assert all(e["demanda_id"] == d["id"] and e["texto"] is None and e["created_at"] for e in eventos)
+
+
+def test_comentarios_equipe_e_solicitante(client, grants, who):
+    d = demanda(client)
+    r = comentar(client, d, "  Qual o prazo?  ")
+    assert r.status_code == 201, r.text
+    assert (r.json()["tipo"], r.json()["autor_sub"], r.json()["texto"]) == ("COMENTARIO", "user-a", "Qual o prazo?")
+    who["sub"] = "user-b"
+    assert comentar(client, d, "Amanhã").status_code == 201
+    assert [e["tipo"] for e in historico(client, d).json()] == ["ABERTURA", "COMENTARIO", "COMENTARIO"]
+    send(client, "POST", f"/{d['id']}/concluir")
+    assert comentar(client, d, "Obrigado").status_code == 201
+    assert get(client, f"/{d['id']}").json()["status"] == "CONCLUIDA"
+
+
+def test_comentario_somente_leitura_so_na_propria_demanda(client, grants, who):
+    propria = demanda(client)
+    who["sub"] = "user-b"
+    alheia = demanda(client, "Do B")
+    somente_leitura(grants)
+    who["sub"] = "user-a"
+    assert comentar(client, propria, "Posso complementar?").status_code == 201
+    r = historico(client, propria)
+    assert r.status_code == 200 and [e["tipo"] for e in r.json()] == ["ABERTURA", "COMENTARIO"]
+    assert comentar(client, alheia, "x").status_code == 404
+    assert historico(client, alheia).status_code == 404
+
+
+def test_comentario_em_cancelada_e_conflito(client):
+    d = demanda(client)
+    send(client, "POST", f"/{d['id']}/cancelar")
+    assert comentar(client, d, "tarde").status_code == 409
+    assert [e["tipo"] for e in historico(client, d).json()] == ["ABERTURA", "CANCELAMENTO"]
+
+
+def test_comentario_validacao(client):
+    d = demanda(client)
+    for texto in ("", "   ", "x" * 5001):
+        assert comentar(client, d, texto).status_code == 422, len(texto)
+    assert send(client, "POST", f"/{d['id']}/comentarios", {}).status_code == 422
+    assert send(client, "POST", f"/{d['id']}/comentarios", {"texto": "a", "x": 1}).status_code == 422
+    assert comentar(client, d, "x" * 5000).status_code == 201
+
+
+def test_historico_outro_tenant_e_inexistente(client):
+    d = demanda(client)
+    assert historico(client, d, TENANT_B).status_code == 404
+    assert comentar(client, d, "x", TENANT_B).status_code == 404
+    assert historico(client, {"id": uuid4()}).status_code == 404
+    assert comentar(client, {"id": uuid4()}, "x").status_code == 404
+    assert len(historico(client, d).json()) == 1
+
+
 # --- isolamento e permissões -------------------------------------------------------------------------------------
 
 
