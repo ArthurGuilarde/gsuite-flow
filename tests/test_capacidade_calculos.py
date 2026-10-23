@@ -104,3 +104,52 @@ def test_semana_informada():
     r = calcular_dashboard([], [], semana)
     assert r["semana_id"] == semana.id
     assert r["periodo"] == "2026-S01"
+
+
+def resumo(ocorrencias, concluidas, previstos, executados):
+    return {
+        "ocorrencias": ocorrencias,
+        "concluidas": concluidas,
+        "pendentes": ocorrencias - concluidas,
+        "minutos_previstos": previstos,
+        "minutos_executados": executados,
+    }
+
+
+def test_rotinas_none_mantem_comportamento():
+    b = grupo("B", "BUILD")
+    r = calcular_dashboard([b], [lanc(b, "ABERTO", 4)], rotinas=None)
+    assert r["rotinas"] == [] and r["total"] == 4
+
+
+def test_rotinas_somam_pela_categoria():
+    b, r_ = grupo("B", "BUILD"), grupo("R", "RUN")
+    rotinas = {
+        "BUILD": resumo(6, 2, 360, 150),
+        "RUN": resumo(0, 0, 0, 0),
+        "TOTAL": resumo(6, 2, 360, 150),
+    }
+    r = calcular_dashboard([b, r_], [lanc(b, "ABERTO", 1), lanc(r_, "ABERTO", 3)], rotinas=rotinas)
+    assert r["rotinas"] == [
+        {
+            "categoria": "BUILD",
+            "abertos": 4,
+            "resolvidos": 2,
+            "total": 6,
+            "minutos_previstos": 360,
+            "minutos_executados": 150,
+        }
+    ]
+    assert (r["qtd_build"], r["qtd_run"], r["total"]) == (7, 3, 10)
+    assert (r["abertos_build"], r["resolvidos_build"]) == (5, 2)
+    assert r["total_abertos"] == 8 and r["total_resolvidos"] == 2
+    assert r["perc_build"] == 0.7 and r["build_atingiu_meta"] is True
+    assert [g["nome"] for g in r["groups"]] == ["B", "R"] and r["groups"][0]["total"] == 1
+
+
+def test_rotinas_sem_grupos_e_com_run():
+    rotinas = {"BUILD": resumo(0, 0, 0, 0), "RUN": resumo(3, 3, 90, 100), "TOTAL": resumo(3, 3, 90, 100)}
+    r = calcular_dashboard([], [], rotinas=rotinas)
+    assert [x["categoria"] for x in r["rotinas"]] == ["RUN"]
+    assert (r["qtd_run"], r["resolvidos_run"], r["perc_run"], r["run_atingiu_meta"]) == (3, 3, 1.0, False)
+    assert r["taxa_resolucao"] == 100.0

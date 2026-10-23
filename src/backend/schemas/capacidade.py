@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from src.backend.schemas.rotinas import RotinaDashboard
+
 Categoria = Literal["BUILD", "RUN"]
 StatusLancamento = Literal["ABERTO", "RESOLVIDO"]
 COR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
@@ -200,3 +202,4 @@ class DashboardView(BaseModel):
     perc_build_abertos: float
     perc_run_abertos: float
     groups: list[GrupoDashboard]
+    rotinas: list[RotinaDashboard]

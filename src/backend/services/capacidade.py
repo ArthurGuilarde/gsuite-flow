@@ -20,6 +20,7 @@ from src.backend.schemas.capacidade import (
     SemanaCreate,
     SemanaUpdate,
 )
+from src.backend.services import rotinas as rotinas_service
 from src.backend.tenancy.context import TenantContext
 
 META_BUILD_MIN = 0.70
@@ -49,11 +50,16 @@ def _arred(valor: float, casas: int) -> float:
 
 
 def calcular_dashboard(
-    grupos: Iterable[Grupo], lancamentos: Iterable[Lancamento], semana: Semana | None = None
+    grupos: Iterable[Grupo],
+    lancamentos: Iterable[Lancamento],
+    semana: Semana | None = None,
+    rotinas: dict[str, dict[str, int]] | None = None,
 ) -> dict[str, Any]:
     """Agrega BUILD x RUN em Python sobre entidades já carregadas (somente grupos ativos).
 
     Se `semana` vier informada, os lançamentos devem ser os dessa semana; caso contrário, de todas.
+    `rotinas` é a saída de `resumo_esforco`: ocorrências pendentes contam como abertas e concluídas como resolvidas,
+    pela categoria da própria rotina.
     """
     ativos = sorted((g for g in grupos if g.ativo), key=lambda g: (g.categoria, g.nome))
     abertos_por_grupo: dict[UUID, int] = {g.id: 0 for g in ativos}
@@ -84,6 +90,24 @@ def calcular_dashboard(
                 "taxa_resolucao": _arred(_ratio(resolvidos, total) * 100, 1),
                 "pct_aberto": _arred(_ratio(abertos, total) * 100, 1),
                 "pct_resolvido": _arred(_ratio(resolvidos, total) * 100, 1),
+            }
+        )
+
+    itens_rotinas: list[dict[str, Any]] = []
+    for categoria in ("BUILD", "RUN"):
+        resumo = (rotinas or {}).get(categoria)
+        if not resumo or resumo["ocorrencias"] <= 0:
+            continue
+        totais[categoria][0] += resumo["pendentes"]
+        totais[categoria][1] += resumo["concluidas"]
+        itens_rotinas.append(
+            {
+                "categoria": categoria,
+                "abertos": resumo["pendentes"],
+                "resolvidos": resumo["concluidas"],
+                "total": resumo["ocorrencias"],
+                "minutos_previstos": resumo["minutos_previstos"],
+                "minutos_executados": resumo["minutos_executados"],
             }
         )
 
@@ -132,6 +156,7 @@ def calcular_dashboard(
         "perc_build_abertos": _arred(perc_build_ab, 4),
         "perc_run_abertos": _arred(perc_run_ab, 4),
         "groups": itens,
+        "rotinas": itens_rotinas,
     }
 
 
@@ -199,7 +224,8 @@ def dashboard(db: Session, ctx: TenantContext, semana_id: UUID | None) -> dict[s
     semana = _semana_ou_404(db, ctx, semana_id) if semana_id is not None else None
     grupos = repo.listar_grupos(db, ctx.tenant_id, somente_ativos=True)
     lancamentos = repo.listar_lancamentos(db, ctx.tenant_id, semana_id=semana_id)
-    return calcular_dashboard(grupos, lancamentos, semana)
+    resumo = rotinas_service.resumo_para_painel(db, ctx, semana, date.today())
+    return calcular_dashboard(grupos, lancamentos, semana, resumo)
 
 
 # --- grupos -----------------------------------------------------------------------------------------------------

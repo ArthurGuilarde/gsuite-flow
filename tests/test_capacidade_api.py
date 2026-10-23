@@ -244,6 +244,53 @@ def test_dashboard(client):
     assert get(client, f"/dashboard?semana_id={uuid4()}").status_code == 404
 
 
+def test_dashboard_inclui_rotinas(client):
+    b = novo_grupo(client, "B", "BUILD")
+    s1 = nova_semana(client, "S1", data_inicio="2026-01-05", data_fim="2026-01-11")
+    s2 = nova_semana(client, "S2", data_inicio="2026-01-12", data_fim="2026-01-18")
+    send(
+        client,
+        "PUT",
+        "/lancamentos/par",
+        {"grupo_id": b["id"], "semana_id": s1["id"], "qtd_aberto": 1, "qtd_resolvido": 0},
+    )
+    base = {"inicio_vigencia": "2026-01-01", "tipo_agendamento": "SEMANAL", "dia_semana": "Segunda"}
+    r = send(client, "POST", "/rotinas", {**base, "titulo": "Build", "categoria": "BUILD", "esforco_estimado_min": 60})
+    build = r.json()
+    send(client, "POST", "/rotinas", {**base, "titulo": "Run", "categoria": "RUN", "esforco_estimado_min": 30})
+    conclusao = {"semana_id": s1["id"], "ocorrencia": "SEMANA", "status": "CONCLUIDA", "esforco_real_min": 45}
+    assert send(client, "PUT", f"/rotinas/{build['id']}/execucao", conclusao).status_code == 200
+    uma = get(client, f"/dashboard?semana_id={s1['id']}").json()
+    assert {x["categoria"]: x for x in uma["rotinas"]} == {
+        "BUILD": {
+            "categoria": "BUILD",
+            "abertos": 0,
+            "resolvidos": 1,
+            "total": 1,
+            "minutos_previstos": 60,
+            "minutos_executados": 45,
+        },
+        "RUN": {
+            "categoria": "RUN",
+            "abertos": 1,
+            "resolvidos": 0,
+            "total": 1,
+            "minutos_previstos": 30,
+            "minutos_executados": 0,
+        },
+    }
+    assert (uma["qtd_build"], uma["qtd_run"], uma["total"]) == (2, 1, 3)
+    assert (uma["resolvidos_build"], uma["abertos_build"], uma["abertos_run"]) == (1, 1, 1)
+    # Sem semana_id: soma de todas as semanas (duas ocorrências por rotina).
+    todas = get(client, "/dashboard").json()
+    assert {x["categoria"]: x["total"] for x in todas["rotinas"]} == {"BUILD": 2, "RUN": 2}
+    assert todas["qtd_build"] == 3 and todas["qtd_run"] == 2
+    vazia = get(client, f"/dashboard?semana_id={s2['id']}").json()
+    assert vazia["total"] == 2 and {x["categoria"]: x["abertos"] for x in vazia["rotinas"]} == {"BUILD": 1, "RUN": 1}
+    # Outro tenant não enxerga as rotinas de A.
+    assert get(client, "/dashboard", TENANT_B).json()["rotinas"] == []
+
+
 def test_isolamento_entre_tenants(client):
     g, s = novo_grupo(client), nova_semana(client)
     lanc = send(client, "POST", "/lancamentos", {"grupo_id": g["id"], "semana_id": s["id"], "quantidade": 5}).json()

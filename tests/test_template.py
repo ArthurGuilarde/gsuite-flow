@@ -8,7 +8,14 @@ def test_template_domain_is_only_capacidade():
     from tests.support.tenant_example import TestBase
 
     assert set(TestBase.metadata.tables) == {"tenant_test_records"}
-    assert set(Base.metadata.tables) == {"browser_sessions", "grupos", "semanas", "lancamentos"}
+    assert set(Base.metadata.tables) == {
+        "browser_sessions",
+        "grupos",
+        "semanas",
+        "lancamentos",
+        "rotinas",
+        "rotina_execucoes",
+    }
     paths = app.openapi()["paths"]
     assert "/api/v1/context" in paths
     assert not any("notes" in path or "test-records" in path for path in paths)
