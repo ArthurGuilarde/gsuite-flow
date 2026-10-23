@@ -55,6 +55,8 @@ Decisão em [ADR-008](adrs/ADR-008-demandas-triagem-em-grupos.md). Mesmas camada
 
 Tabelas (migração `0007_demandas`): coluna `grupos.sistema` (com índice único parcial de um grupo de sistema por tenant) e `demandas`, com `id` UUID, `tenant_id` e `created_by`. `demandas` referencia o grupo por chave estrangeira composta `(tenant_id, grupo_id)` com `ON DELETE RESTRICT` (o serviço responde 409 ao excluir grupo com demandas). No PostgreSQL `demandas` tem ENABLE/FORCE RLS com USING e WITH CHECK por `app.tenant_id`, sem policy por sujeito; no SQLite valem apenas os guardrails do ORM.
 
+Detalhe, histórico e comentários ([ADR-009](adrs/ADR-009-demandas-historico-e-comentarios.md)): a migração `0008_demandas_historico` cria `demanda_historico`, com `id` UUID, `tenant_id`, `created_by`, `demanda_id`, `tipo` (ABERTURA, CLASSIFICACAO, CONCLUSAO, REABERTURA, CANCELAMENTO, COMENTARIO), `autor_sub`, `texto` e `grupo_nome` (snapshot do grupo de destino, sem chave estrangeira). Referencia a demanda por chave estrangeira composta `(tenant_id, demanda_id)` com `ON DELETE CASCADE`; no PostgreSQL tem ENABLE/FORCE RLS com USING e WITH CHECK por `app.tenant_id`. O serviço de Demandas grava o evento de estado na mesma transação da mudança, e a visibilidade do histórico e dos comentários é a da demanda. Comentários são imutáveis e o contrato (`GET /{id}/historico`, `POST /{id}/comentarios`) vem do OpenAPI gerado.
+
 ## Desenvolvimento isolado
 
 O perfil dev usa um adaptador de identidade/grants com fixtures locais, sem criar um provedor OIDC falso. A sessão opaca, CSRF e verificação de tenant continuam no mesmo fluxo da aplicação. Configuração e middleware limitam esse adaptador ao ambiente development e ao loopback; endpoints locais não são montados em OIDC/produção.

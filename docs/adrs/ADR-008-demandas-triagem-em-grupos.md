@@ -64,6 +64,7 @@ Critérios: testes de API de Demandas (Triagem criada uma vez e adotada se já e
 - [Arquitetura](../architecture.md)
 - [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md)
 - [ADR-004](ADR-004-rotinas-esforco-e-pendencias.md)
+- [ADR-009](ADR-009-demandas-historico-e-comentarios.md) — complementa com detalhe, histórico e comentários
 - [Master ADR](MASTER-ADR.md)
 
 ## Histórico

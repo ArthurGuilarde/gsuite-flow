@@ -33,6 +33,8 @@
 
 | 008 | [Demandas: triagem como grupo de sistema e contagem no painel](ADR-008-demandas-triagem-em-grupos.md) | 2026-10-23 | ✅ Aceito | Produto e domínio | Demandas pertencem aos Grupos da Capacidade, Triagem é grupo de sistema RUN criado no primeiro uso e protegido, ciclo ABERTA/CONCLUIDA/CANCELADA, aberta e concluída contam como aberto e resolvido do grupo no painel BUILD × RUN (calculadas na hora) e solicitante só com read abre e vê as próprias. |
 
+| 009 | [Demandas: detalhe, histórico e comentários](ADR-009-demandas-historico-e-comentarios.md) | 2026-10-23 | ✅ Aceito | Produto e domínio | Detalhe com linha do tempo (`demanda_historico`, eventos de estado na mesma transação) e comentários imutáveis de 1 a 5000 caracteres em demanda aberta ou concluída; solicitante só com read comenta nas próprias demandas e equipe com write em qualquer uma; cancelada é só leitura. |
+
 ## Mapa de Dependências
 
 ADR-002 usa a estrutura de partida descrita em [ADR-001](ADR-001-base-minima-sem-dominio.md), sem alterar seu status.
@@ -48,6 +50,8 @@ ADR-006 depende de [ADR-005](ADR-005-finops-valor-das-decisoes.md) e [ADR-003](A
 ADR-007 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md), [ADR-004](ADR-004-rotinas-esforco-e-pendencias.md) e [ADR-006](ADR-006-despesas-contratos-e-conversao.md).
 
 ADR-008 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md) e [ADR-004](ADR-004-rotinas-esforco-e-pendencias.md).
+
+ADR-009 depende de [ADR-008](ADR-008-demandas-triagem-em-grupos.md) e o estende, sem alterar seu status.
 
 ## Índice por Área
 
@@ -67,6 +71,7 @@ ADR-008 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md) e [ADR-0
 - [ADR-006](ADR-006-despesas-contratos-e-conversao.md) — Despesas & Contratos: inventário, orçamento e conversão em iniciativa
 - [ADR-007](ADR-007-planner-pessoal-meu-dia.md) — Planner pessoal "Meu Dia": dados por pessoa, escopo integrado e pendências
 - [ADR-008](ADR-008-demandas-triagem-em-grupos.md) — Demandas: triagem como grupo de sistema e contagem no painel
+- [ADR-009](ADR-009-demandas-historico-e-comentarios.md) — Demandas: detalhe, histórico e comentários
 
 ## Como Criar um Novo ADR
 
