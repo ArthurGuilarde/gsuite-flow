@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-# These tests exercise the uninitialized template; once bootstrap ran here, the copied files are no longer template files.
+# These tests exercise the uninitialized template; after bootstrap the copied files no longer match it.
 pytestmark = pytest.mark.skipif(
     json.loads((ROOT / "suite-app.json").read_text(encoding="utf-8"))["app_id"] != "suite-example",
     reason="repositório já inicializado pelo bootstrap",

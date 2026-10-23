@@ -1,6 +1,8 @@
-# template_suite_guilarde
+# GFlow
 
-Base para aplicações da suíte Guilarde: FastAPI, SQLAlchemy 2, Alembic e frontend HTML/CSS/JS. Inclui integração OIDC/Core, sessões BFF, autorização por tenant e testes de isolamento PostgreSQL. Não contém módulos de negócio.
+Indicadores de engenharia da suíte Guilarde: capacidade BUILD ≥ 70% / RUN ≤ 30%, rotinas, Planner pessoal, FinOps e Despesas & Contratos, portados do MVP "Indicadores de Engenharia" em fases ([ADR-003](docs/adrs/ADR-003-porte-mvp-indicadores-em-fases.md)). Stack: FastAPI, SQLAlchemy 2, Alembic e frontend HTML/CSS/JS, com integração OIDC/Core, sessões BFF, autorização por tenant e testes de isolamento PostgreSQL.
+
+**Módulos:** Capacidade (Fase 1: grupos, semanas, lançamentos e dashboard) está implementado; rotinas, Planner pessoal, FinOps e Despesas & Contratos são fases futuras. Um tenant é um cliente (PF ou PJ) que contrata o sistema.
 
 ## Escolha um cenário
 
@@ -52,7 +54,7 @@ Comece pelo [índice](docs/README.md). Os guias principais são [operações](do
 | `docs/` | Contexto, arquitetura, integração, segurança e operação |
 | `src/backend/api/` | Autenticação, contexto de tenant e rotas da aplicação |
 | `src/backend/core/`, `integrations/`, `tenancy/` | Configuração, integração e isolamento |
-| `src/backend/models/`, `schemas/`, `services/`, `repositories/` | Pontos de extensão do domínio |
+| `src/backend/models/`, `schemas/`, `services/`, `repositories/` | Domínio Capacidade (Fase 1) e pontos de extensão |
 | `src/backend/migrations/` | Migrações, executadas como etapa separada em perfis externos |
 | `src/frontend/` | Login, seleção de tenant e cliente BFF |
 | `tests/` | Contratos, segurança e integração PostgreSQL |

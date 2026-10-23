@@ -19,6 +19,12 @@ A role runtime guilarde_app não é proprietária das tabelas, superuser ou BYPA
 Veja o [guia de desenvolvimento](development.md) para os caminhos e a referência de implementação.
 
 
+## Domínio Capacidade (Fase 1)
+
+Decisão em [ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md); regras em [project-context.md](project-context.md). Camadas: `api/v1/capacidade.py` → `services/capacidade.py` → `repositories/capacidade.py` → `models/capacidade.py`, com schemas Pydantic de entrada que proíbem campos extras e nunca aceitam `tenant_id`. O dashboard agrega em Python sobre linhas lidas via ORM, porque a guarda SQLite recusa SQL textual.
+
+Tabelas (migração `0002_capacidade`): `grupos`, `semanas` e `lancamentos`, todas com `id` UUID, `tenant_id` e `created_by`. `lancamentos` referencia grupo e semana por chaves estrangeiras compostas `(tenant_id, id)` com `ON DELETE CASCADE`. No PostgreSQL as três têm ENABLE/FORCE RLS com USING e WITH CHECK; no SQLite valem apenas os guardrails do ORM. Fases seguintes (rotinas, Planner pessoal, FinOps, Despesas & Contratos) entram como domínios próprios, cada uma com seus ADRs quando houver decisão arquitetural.
+
 ## Desenvolvimento isolado
 
 O perfil dev usa um adaptador de identidade/grants com fixtures locais, sem criar um provedor OIDC falso. A sessão opaca, CSRF e verificação de tenant continuam no mesmo fluxo da aplicação. Configuração e middleware limitam esse adaptador ao ambiente development e ao loopback; endpoints locais não são montados em OIDC/produção.

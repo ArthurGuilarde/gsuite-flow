@@ -3,8 +3,8 @@
 > Registro central dos Architecture Decision Records deste projeto.
 > Cada entrada referencia um ADR completo com contexto, decisão, alternativas e consequências.
 
-**Última atualização:** 2026-10-15  
-**Projeto:** template_suite_guilarde — Guilarde  
+**Última atualização:** 2026-10-23  
+**Projeto:** GFlow  
 **Stack principal:** FastAPI · SQLAlchemy 2 · Alembic · SQLite (dev) / PostgreSQL (integrated/prod) · Vanilla HTML/CSS/JS · Python
 
 > [!NOTE]
@@ -21,9 +21,13 @@
 
 | 002 | [Desenvolvimento isolado e perfis de execução](ADR-002-perfis-dev-integrated-production.md) | 2026-10-15 | ✅ Aceito | Operação e desenvolvimento | SQLite e fixtures apenas em dev; PostgreSQL/OIDC nos perfis externos; CLI serve/migrate/check. |
 
+| 003 | [Porte do MVP Indicadores de Engenharia em fases](ADR-003-porte-mvp-indicadores-em-fases.md) | 2026-10-23 | ✅ Aceito | Produto e domínio | Porte por fases (Fase 1 Capacidade), tenant = cliente PF/PJ, sem migração de dados, UUID e FKs compostas, ORM, RLS e frontend ES modules com CSP estrita. |
+
 ## Mapa de Dependências
 
 ADR-002 usa a estrutura de partida descrita em [ADR-001](ADR-001-base-minima-sem-dominio.md), sem alterar seu status.
+
+ADR-003 depende de [ADR-001](ADR-001-base-minima-sem-dominio.md) e [ADR-002](ADR-002-perfis-dev-integrated-production.md), sem alterar o status do ADR-001.
 
 ## Índice por Área
 
@@ -34,6 +38,10 @@ ADR-002 usa a estrutura de partida descrita em [ADR-001](ADR-001-base-minima-sem
 ### Operação e desenvolvimento
 
 - [ADR-002](ADR-002-perfis-dev-integrated-production.md) — Desenvolvimento isolado e perfis de execução
+
+### Produto e domínio
+
+- [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md) — Porte do MVP Indicadores de Engenharia em fases
 
 ## Como Criar um Novo ADR
 

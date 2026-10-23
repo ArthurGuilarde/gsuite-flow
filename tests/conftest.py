@@ -66,5 +66,5 @@ def postgres():
 def db_factory(postgres):
     owner, factory = postgres
     with owner.begin() as db:
-        db.execute(text("TRUNCATE tenant_test_records, browser_sessions"))
+        db.execute(text("TRUNCATE tenant_test_records, browser_sessions, lancamentos, semanas, grupos"))
     return factory
