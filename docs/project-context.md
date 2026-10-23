@@ -7,31 +7,32 @@ Este arquivo descreve o produto a ser construído. Bootstrap personaliza os meta
 
 ## Objetivo e público
 
-Acompanhar indicadores de engenharia: capacidade **BUILD ≥ 70% / RUN ≤ 30%**, rotinas, Planner pessoal, FinOps e Despesas & Contratos. Este produto é o porte para o gflow do MVP "Indicadores de Engenharia de Dados". Usuários: membros de um tenant com acesso à aplicação. A definir: perfis de usuário detalhados e resultados de negócio mensuráveis além da meta BUILD/RUN.
+Acompanhar indicadores de engenharia: capacidade **BUILD ≥ 70% / RUN ≤ 30%**, rotinas, Planner pessoal, FinOps, Despesas & Contratos e Demandas. Este produto é o porte para o gflow do MVP "Indicadores de Engenharia de Dados". Usuários: membros de um tenant com acesso à aplicação. A definir: perfis de usuário detalhados e resultados de negócio mensuráveis além da meta BUILD/RUN.
 
 ## Escopo
 
-O porte é feito em fases ([ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md)); as Fases 2, 3, 4 e 5 estão registradas no [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md), no [ADR-005](adrs/ADR-005-finops-valor-das-decisoes.md), no [ADR-006](adrs/ADR-006-despesas-contratos-e-conversao.md) e no [ADR-007](adrs/ADR-007-planner-pessoal-meu-dia.md).
+O porte é feito em fases ([ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md)); as Fases 2, 3, 4, 5 e 6 estão registradas no [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md), no [ADR-005](adrs/ADR-005-finops-valor-das-decisoes.md), no [ADR-006](adrs/ADR-006-despesas-contratos-e-conversao.md), no [ADR-007](adrs/ADR-007-planner-pessoal-meu-dia.md) e no [ADR-008](adrs/ADR-008-demandas-triagem-em-grupos.md).
 
 - **Fase 1 (Capacidade):** grupos (squads), semanas/ciclos, lançamentos ABERTO/RESOLVIDO e dashboard BUILD × RUN.
 - **Fase 2 (Rotinas, em andamento):** catálogo de rotinas recorrentes, execução por semana/ocorrência, esforço estimado e real, pendências (vence hoje e atrasadas) e soma no painel BUILD × RUN pela categoria da rotina. Fora da fase: grade de agenda do MVP (A definir).
 - **Fase 3 (FinOps, em andamento):** iniciativas (melhoria, automação e otimização de custo) como fonte única de saving, janela de 6 meses até virar novo normal, perfis de custo/hora, investimento/ROI/payback, e fontes de custo com faturas (orçado × realizado) apenas para acompanhamento.
 - **Fase 4 (Despesas & Contratos, em andamento):** inventário de despesas com status de auditoria, cancelar/renegociar como iniciativas vinculadas do FinOps (reversíveis), orçamento mensal opcional, ligação opcional com fonte de custo, alertas de renovação em 30/60 dias e painel de run-rate, desperdício e saving capturado.
 - **Fase 5 (Planner pessoal "Meu Dia", em andamento):** planner por pessoa dentro do tenant, com foco do dia, até 3 prioridades, tarefas e notas, mais as rotinas que vencem hoje ou estão atrasadas e os contratos que renovam em até 30 dias; um registro por dia, com pendências de dias anteriores que podem ser trazidas ou descartadas. Fora do MVP: hidratação, grade de horários, relógio e estado JSON livre no navegador.
-- **Próximas fases:** Não há fases definidas além da Fase 5.
+- **Fase 6 (Demandas, em andamento):** demandas pertencem aos Grupos da Capacidade; o grupo de sistema "Triagem" (RUN) é criado no primeiro uso e recebe toda demanda nova. Qualquer membro com read abre uma demanda e vê as próprias; a equipe com write vê todas, classifica (move para outro grupo), conclui, reabre e cancela. Ciclo: ABERTA, CONCLUIDA e CANCELADA. A demanda aberta conta como aberto e a concluída como resolvido do seu grupo no painel BUILD × RUN.
+- **Próximas fases:** Não há fases definidas além da Fase 6.
 - **Removido do MVP:** alias `/api` legado, `audit_log`, `/metrics/latest`, `/raw`, exportação HTML standalone e "copiar contexto LLM" (volta com Rotinas). Removidos também, no porte de Rotinas: grade de agenda e `bloco`, `data_especifica`, status no catálogo e o campo `recorrencia`. Removidos também, no porte de FinOps: tabela de meses cadastráveis (a competência é derivada de datas), histórico de saves como fonte de saving, busca "fabric" por nome, sincronização automática fatura→saving e Chart.js por CDN.
 
 ## Tenant e acesso
 
 Um tenant representa um cliente (pessoa física ou jurídica) que contrata o sistema; é um espaço de trabalho compartilhado, nunca a aplicação ou um usuário. Membros e ingresso vêm do Core. A definir: regras de ingresso específicas deste produto.
 
-Em produção/integrated, identidade é externa (Authentik), e memberships/entitlements são centrais (Core). Dev isolado usa identidades/grants fictícios somente para desenvolvimento. Permissões básicas: access/read/write; o Core é a autoridade. Leitura exige read; criar, alterar e remover exigem write.
+Em produção/integrated, identidade é externa (Authentik), e memberships/entitlements são centrais (Core). Dev isolado usa identidades/grants fictícios somente para desenvolvimento. Permissões básicas: access/read/write; o Core é a autoridade. Leitura exige read; criar, alterar e remover exigem write. Exceção explícita ([ADR-008](adrs/ADR-008-demandas-triagem-em-grupos.md)): abrir uma demanda exige apenas read, e quem não tem write vê somente as demandas que abriu.
 
 ## Domínio e regras
 
 Termos da Fase 1:
 
-- **Grupo:** squad ou frente de trabalho, com nome (único por tenant), categoria BUILD ou RUN, ícone, cor e indicador ativo.
+- **Grupo:** squad ou frente de trabalho, com nome (único por tenant), categoria BUILD ou RUN, ícone, cor e indicador ativo. O grupo **Triagem** é de sistema (RUN, uma por tenant, criado no primeiro uso da Capacidade ou das Demandas): não pode ser excluído, renomeado, desativado nem mudar de categoria (409); ícone e cor podem mudar. Grupo com demandas não é excluído (409; reclassifique as demandas).
 - **Semana:** ciclo identificado por texto (único por tenant), com datas de início e fim opcionais; o fim não pode ser anterior ao início.
 - **Lançamento:** quantidade (≥ 0) de itens de um grupo em uma semana, com status ABERTO ou RESOLVIDO e observação opcional. Cada par grupo/semana tem no máximo um ABERTO e um RESOLVIDO.
 
@@ -42,6 +43,7 @@ Regras do dashboard (todas as semanas ou uma semana):
 - Os mesmos cálculos valem para o subconjunto de resolvidos e o de abertos; a taxa de resolução é resolvidos / total.
 - As ocorrências de rotinas somam pela categoria da própria rotina (ver Termos da Fase 2): pendente conta como aberto e concluída como resolvida. Sem semana selecionada, somam todas as semanas.
 - Grupos padrão (seis do MVP, entre eles "EngDados - Projetos" BUILD e "Rotinas (N0)" RUN) só são criados por ação explícita e apenas os que faltam, por nome. O grupo "Rotinas (N0)" continua existindo para lançamentos manuais; as rotinas cadastradas não somam mais nele.
+- As demandas somam pelo grupo atual (ver Termos da Fase 6): ABERTA conta como aberto, CONCLUIDA como resolvido e CANCELADA não conta. Com semana selecionada que tem datas, a ABERTA conta se a data de abertura cai entre início e fim da semana, e a CONCLUIDA se a data de conclusão cai nesse período; semana sem datas não recebe demandas; sem semana selecionada somam todas as abertas e concluídas. Valem as mesmas regras de grupo ativo, calculadas na hora e nunca gravadas como lançamentos; as datas usam o relógio do servidor.
 - Excluir um grupo ou semana remove seus lançamentos.
 
 A definir: metas configuráveis por tenant (hoje fixas em 70%/30%).
@@ -87,6 +89,14 @@ Termos da Fase 5 (Planner pessoal):
 - **Meu Dia integrado:** além do dia, mostra rotinas que vencem hoje e atrasadas (concluídas pela API de Rotinas) e contratos não cancelados com renovação em até 30 dias (alerta URGENTE de Despesas).
 - **Privacidade:** os dados são da pessoa (`sub` do contexto), nunca do corpo da requisição. Escrever exige write.
 
+Termos da Fase 6 (Demandas):
+
+- **Demanda:** pedido com título (1 a 200 caracteres), descrição opcional (até 10 000), prioridade BAIXA, MEDIA (padrão) ou ALTA, grupo, status e solicitante. Pertence a um Grupo da Capacidade; nasce no grupo Triagem com status ABERTA. Não existe cadastro de filas.
+- **Triagem:** grupo de sistema da Capacidade (ver Termos da Fase 1), criado ou adotado (se já existir um grupo comum com esse nome) de forma idempotente. Não é destino de classificação (422).
+- **Solicitante:** pessoa que abriu a demanda; o `sub` vem do contexto, nunca do corpo. Sem write, vê apenas as próprias demandas (a de outra pessoa resulta em não encontrado). Com write (equipe), vê todas, classifica, conclui, reabre e cancela.
+- **Status:** ABERTA, CONCLUIDA e CANCELADA. Classificar (só ABERTA; senão 409) move a demanda para outro grupo ativo que não seja de sistema, opcionalmente ajusta a prioridade e registra quem classificou e quando; não muda o status. Concluir (ABERTA, inclusive na Triagem) registra quem concluiu e quando; reabrir (CONCLUIDA) volta para ABERTA e limpa a conclusão; cancelar (ABERTA) registra quando. Outras transições resultam em conflito (409).
+- **Ordem da lista:** prioridade ALTA, MEDIA, BAIXA e, dentro dela, criação mais antiga primeiro. Filtros: status, grupo e "minhas".
+
 ## Jornadas e critérios de aceite
 
 Fase 1:
@@ -129,10 +139,19 @@ Fase 5 (Planner pessoal):
 4. **Ver o que o sistema já sabe:** o dia mostra rotinas que vencem hoje e atrasadas e contratos renovando em até 30 dias. Aceite: segue as regras de Rotinas e de Despesas.
 5. **Privacidade:** uma pessoa nunca vê nem altera o planner de outra, mesmo no mesmo tenant. Aceite: registro de outra pessoa resulta em não encontrado; validado por testes de RLS por sujeito, tenant divergente e FK composta em PostgreSQL.
 
+Fase 6 (Demandas):
+
+1. **Abrir:** qualquer membro com read abre uma demanda, que vai para o grupo Triagem como ABERTA. Aceite: título vazio ou acima de 200 caracteres, descrição acima de 10 000 e prioridade inválida são recusados; o solicitante é sempre o `sub` do contexto.
+2. **Acompanhar o que abriu:** quem não tem write vê só as próprias demandas. Aceite: demanda de outra pessoa resulta em não encontrado; a lista segue a ordem de prioridade e criação.
+3. **Triar e classificar:** a equipe com write move a demanda para outro grupo e ajusta a prioridade; pode reclassificar enquanto ABERTA. Aceite: grupo de sistema ou inativo resulta em recusa (422); grupo inexistente ou de outro tenant, em não encontrado; demanda concluída ou cancelada resulta em conflito; fica registrado quem classificou e quando.
+4. **Concluir, reabrir e cancelar:** a equipe conclui uma demanda aberta (inclusive na Triagem), reabre uma concluída e cancela uma aberta. Aceite: transição fora do ciclo resulta em conflito; sem write, classificar, concluir, reabrir e cancelar são negados.
+5. **Painel BUILD × RUN:** a demanda aberta soma como aberto e a concluída como resolvido do seu grupo; a cancelada não soma. Aceite: conforme as regras do dashboard, com período da semana pela data de abertura e de conclusão; excluir grupo com demandas e alterar a Triagem (excluir, renomear, desativar, mudar categoria) resultam em conflito.
+6. **Isolamento:** demandas de outro tenant nunca são visíveis nem referenciáveis (validado por testes de RLS e FK composta em PostgreSQL).
+
 ## Restrições e integrações
 
 Base técnica: FastAPI, SQLAlchemy 2, Alembic e frontend vanilla (ES modules, CSP estrita); SQLite para dev isolado e PostgreSQL para integrated/produção. Não há importação de dados do MVP: cada tenant começa vazio. O Planner pessoal pertence a (tenant, sub) ([ADR-007](adrs/ADR-007-planner-pessoal-meu-dia.md)). A definir: integrações de domínio das fases futuras. Nunca inclua credenciais ou dados pessoais reais neste documento.
 
 ## Pendências
 
-Permanecem "A definir": perfis de usuário, regras de ingresso específicas, metas configuráveis por tenant, metas de esforço de rotinas, grade de agenda, feriados (os dias úteis os ignoram), fuso horário por tenant (hoje é o relógio do servidor), moeda além de BRL, fechamento contábil, fluxo de aprovação de iniciativas e de despesas, despesas recorrentes anuais, multi-moeda, cancelamento de despesa pontual com saving, se o leitor (somente read) pode gravar o próprio planner pessoal, retenção do histórico do Planner e compartilhamento de planner entre pessoas. Registre dúvidas bloqueantes na tarefa; decisões arquiteturais ficam no Master ADR.
+Permanecem "A definir": perfis de usuário, regras de ingresso específicas, metas configuráveis por tenant, metas de esforço de rotinas, grade de agenda, feriados (os dias úteis os ignoram), fuso horário por tenant (hoje é o relógio do servidor), moeda além de BRL, fechamento contábil, fluxo de aprovação de iniciativas e de despesas, despesas recorrentes anuais, multi-moeda, cancelamento de despesa pontual com saving, se o leitor (somente read) pode gravar o próprio planner pessoal, retenção do histórico do Planner e compartilhamento de planner entre pessoas, notificações de demandas, responsável dentro do grupo, o solicitante cancelar a própria demanda, anexos ou comentários em demandas e fuso por tenant para as datas de abertura e conclusão das demandas (hoje é o relógio do servidor). Registre dúvidas bloqueantes na tarefa; decisões arquiteturais ficam no Master ADR.

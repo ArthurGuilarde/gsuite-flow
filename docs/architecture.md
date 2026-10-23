@@ -23,7 +23,7 @@ Veja o [guia de desenvolvimento](development.md) para os caminhos e a referênci
 
 Decisão em [ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md); regras em [project-context.md](project-context.md). Camadas: `api/v1/capacidade.py` → `services/capacidade.py` → `repositories/capacidade.py` → `models/capacidade.py`, com schemas Pydantic de entrada que proíbem campos extras e nunca aceitam `tenant_id`. O dashboard agrega em Python sobre linhas lidas via ORM, porque a guarda SQLite recusa SQL textual.
 
-Tabelas (migração `0002_capacidade`): `grupos`, `semanas` e `lancamentos`, todas com `id` UUID, `tenant_id` e `created_by`. `lancamentos` referencia grupo e semana por chaves estrangeiras compostas `(tenant_id, id)` com `ON DELETE CASCADE`. No PostgreSQL as três têm ENABLE/FORCE RLS com USING e WITH CHECK; no SQLite valem apenas os guardrails do ORM. Fases seguintes (rotinas, FinOps, Despesas & Contratos, Planner pessoal) entram como domínios próprios, cada uma com seus ADRs quando houver decisão arquitetural.
+Tabelas (migração `0002_capacidade`): `grupos`, `semanas` e `lancamentos`, todas com `id` UUID, `tenant_id` e `created_by`. `lancamentos` referencia grupo e semana por chaves estrangeiras compostas `(tenant_id, id)` com `ON DELETE CASCADE`. No PostgreSQL as três têm ENABLE/FORCE RLS com USING e WITH CHECK; no SQLite valem apenas os guardrails do ORM. Fases seguintes (rotinas, FinOps, Despesas & Contratos, Planner pessoal, Demandas) entram como domínios próprios, cada uma com seus ADRs quando houver decisão arquitetural.
 
 ## Domínio Rotinas (Fase 2)
 
@@ -48,6 +48,12 @@ Tabelas (migração `0005_despesas`): `despesas` e `orcamentos_despesas`, com `i
 Decisão em [ADR-007](adrs/ADR-007-planner-pessoal-meu-dia.md). Mesmas camadas dos domínios anteriores, com uma diferença: os dados pertencem a (tenant, sub). O `sub` vem de `ctx.sub` (nunca do corpo) e toda consulta filtra por tenant e sub. A visão "Meu Dia" reutiliza as pendências de Rotinas e o alerta URGENTE de renovação de Despesas, em somente leitura.
 
 Tabelas (migração `0006_planner`): `planner_dias` (única por tenant, sub e data, com `versao` otimista) e `planner_itens`, com `id` UUID, `tenant_id` e `sub`. `planner_itens` referencia o dia por chave estrangeira composta `(tenant_id, dia_id)` com `ON DELETE CASCADE`. No PostgreSQL ambas têm ENABLE/FORCE RLS com a policy `planner_owner`, cujo USING e WITH CHECK exigem `tenant_id` igual a `app.tenant_id` e `sub` igual a `app.subject`; no SQLite valem apenas os guardrails do ORM.
+
+## Domínio Demandas (Fase 6)
+
+Decisão em [ADR-008](adrs/ADR-008-demandas-triagem-em-grupos.md). Mesmas camadas dos domínios anteriores. As demandas pertencem aos Grupos da Capacidade; a Triagem é um grupo de sistema (RUN) que `garantir_triagem`, em `services/capacidade.py`, cria ou adota de forma idempotente por tenant (savepoint e absorção de `IntegrityError`). Ela é chamada em `listar_grupos`, no dashboard e em toda função do serviço de Demandas. Abrir demanda exige apenas read; sem write, o serviço filtra por `solicitante_sub` igual a `ctx.sub` (demanda de outro responde 404). O painel BUILD × RUN soma as demandas por grupo, calculadas na hora (como as rotinas) e nunca gravadas em Lançamentos; `calcular_dashboard` recebe a contagem por grupo como dado puro.
+
+Tabelas (migração `0007_demandas`): coluna `grupos.sistema` (com índice único parcial de um grupo de sistema por tenant) e `demandas`, com `id` UUID, `tenant_id` e `created_by`. `demandas` referencia o grupo por chave estrangeira composta `(tenant_id, grupo_id)` com `ON DELETE RESTRICT` (o serviço responde 409 ao excluir grupo com demandas). No PostgreSQL `demandas` tem ENABLE/FORCE RLS com USING e WITH CHECK por `app.tenant_id`, sem policy por sujeito; no SQLite valem apenas os guardrails do ORM.
 
 ## Desenvolvimento isolado
 

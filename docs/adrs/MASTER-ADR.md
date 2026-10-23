@@ -31,6 +31,8 @@
 
 | 007 | [Planner pessoal "Meu Dia": dados por pessoa, escopo integrado e pendências](ADR-007-planner-pessoal-meu-dia.md) | 2026-10-23 | ✅ Aceito | Produto e domínio | Registros por (tenant, sub) com RLS também por sujeito, Meu Dia com prioridades, tarefas, notas, rotinas pendentes e renovações urgentes, um registro por dia com pendências que migram ou são descartadas e versão otimista. |
 
+| 008 | [Demandas: triagem como grupo de sistema e contagem no painel](ADR-008-demandas-triagem-em-grupos.md) | 2026-10-23 | ✅ Aceito | Produto e domínio | Demandas pertencem aos Grupos da Capacidade, Triagem é grupo de sistema RUN criado no primeiro uso e protegido, ciclo ABERTA/CONCLUIDA/CANCELADA, aberta e concluída contam como aberto e resolvido do grupo no painel BUILD × RUN (calculadas na hora) e solicitante só com read abre e vê as próprias. |
+
 ## Mapa de Dependências
 
 ADR-002 usa a estrutura de partida descrita em [ADR-001](ADR-001-base-minima-sem-dominio.md), sem alterar seu status.
@@ -44,6 +46,8 @@ ADR-005 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md).
 ADR-006 depende de [ADR-005](ADR-005-finops-valor-das-decisoes.md) e [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md).
 
 ADR-007 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md), [ADR-004](ADR-004-rotinas-esforco-e-pendencias.md) e [ADR-006](ADR-006-despesas-contratos-e-conversao.md).
+
+ADR-008 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md) e [ADR-004](ADR-004-rotinas-esforco-e-pendencias.md).
 
 ## Índice por Área
 
@@ -62,6 +66,7 @@ ADR-007 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md), [ADR-00
 - [ADR-005](ADR-005-finops-valor-das-decisoes.md) — FinOps: valor financeiro das decisões
 - [ADR-006](ADR-006-despesas-contratos-e-conversao.md) — Despesas & Contratos: inventário, orçamento e conversão em iniciativa
 - [ADR-007](ADR-007-planner-pessoal-meu-dia.md) — Planner pessoal "Meu Dia": dados por pessoa, escopo integrado e pendências
+- [ADR-008](ADR-008-demandas-triagem-em-grupos.md) — Demandas: triagem como grupo de sistema e contagem no painel
 
 ## Como Criar um Novo ADR
 
