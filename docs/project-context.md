@@ -11,12 +11,13 @@ Acompanhar indicadores de engenharia: capacidade **BUILD ≥ 70% / RUN ≤ 30%**
 
 ## Escopo
 
-O porte é feito em fases ([ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md)); a Fase 2 está registrada no [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md).
+O porte é feito em fases ([ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md)); as Fases 2 e 3 estão registradas no [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md) e no [ADR-005](adrs/ADR-005-finops-valor-das-decisoes.md).
 
 - **Fase 1 (Capacidade):** grupos (squads), semanas/ciclos, lançamentos ABERTO/RESOLVIDO e dashboard BUILD × RUN.
 - **Fase 2 (Rotinas, em andamento):** catálogo de rotinas recorrentes, execução por semana/ocorrência, esforço estimado e real, pendências (vence hoje e atrasadas) e soma no painel BUILD × RUN pela categoria da rotina. Fora da fase: grade de agenda do MVP (A definir).
-- **Próximas fases:** Planner pessoal, FinOps e Despesas & Contratos. A definir: ordem e regras detalhadas das fases 3–5.
-- **Removido do MVP:** alias `/api` legado, `audit_log`, `/metrics/latest`, `/raw`, exportação HTML standalone e "copiar contexto LLM" (volta com Rotinas). Removidos também, no porte de Rotinas: grade de agenda e `bloco`, `data_especifica`, status no catálogo e o campo `recorrencia`.
+- **Fase 3 (FinOps, em andamento):** iniciativas (melhoria, automação e otimização de custo) como fonte única de saving, janela de 6 meses até virar novo normal, perfis de custo/hora, investimento/ROI/payback, e fontes de custo com faturas (orçado × realizado) apenas para acompanhamento.
+- **Próximas fases:** Planner pessoal e Despesas & Contratos. A definir: ordem e regras detalhadas das fases 4–5.
+- **Removido do MVP:** alias `/api` legado, `audit_log`, `/metrics/latest`, `/raw`, exportação HTML standalone e "copiar contexto LLM" (volta com Rotinas). Removidos também, no porte de Rotinas: grade de agenda e `bloco`, `data_especifica`, status no catálogo e o campo `recorrencia`. Removidos também, no porte de FinOps: tabela de meses cadastráveis (a competência é derivada de datas), histórico de saves como fonte de saving, busca "fabric" por nome, sincronização automática fatura→saving e Chart.js por CDN.
 
 ## Tenant e acesso
 
@@ -53,6 +54,18 @@ Termos da Fase 2 (Rotinas):
 - **Esforço estimado e real:** minutos previstos somam o estimado de todas as ocorrências; minutos executados somam, nas concluídas, o real quando informado e o estimado quando não.
 - **Situação:** CONCLUIDA; SEM_DATA (pendente sem data prevista); VENCE_HOJE; ATRASADA (data anterior a hoje); PREVISTA. Ocorrências pendentes que vencem hoje ou estão atrasadas, de qualquer semana com datas, aparecem na lista de pendências até serem concluídas.
 
+Termos da Fase 3 (FinOps):
+
+- **Iniciativa:** melhoria, automação ou otimização de custo, com título, mês de início, janela, mês de encerramento opcional, fonte de custo opcional e investimento opcional. É a única fonte de saving.
+- **Modo de cálculo:** DIRETO_REAIS (valor mensal informado, para dinheiro que sai de fatura ou contrato) ou POR_TEMPO (capacidade do time convertida em R$ a partir dos participantes e da frequência).
+- **Participante:** perfil, quantidade de pessoas e horas antes e depois por execução. Nome e custo/hora do perfil são copiados ao salvar (snapshot): alterar o perfil depois não reescreve o passado. A economia de horas pode ser negativa e é mostrada como está.
+- **Perfil de custo/hora:** preset do tenant (por exemplo Analista R$ 80, Executivo R$ 300). O formulário sugere R$ 80 quando não há perfil.
+- **Cálculo mensal:** horas/mês = (antes − depois) × pessoas × multiplicador de frequência (DIARIA_UTIL 22, DIARIA_CORRIDA 30, SEMANAL 4,33, QUINZENAL 2, MENSAL 1); valor/mês = horas/mês × custo/hora; FTE = horas/mês ÷ 168.
+- **Janela e status:** toda iniciativa nasce com janela de 6 meses, editável de 1 a 60. O saving conta do mês de início até o fim da janela (ou do encerramento, se anterior). Status no mês de referência: PLANEJADA, EM_SAVING, NOVO_NORMAL (janela concluída; deixa de somar saving no período) e ENCERRADA.
+- **Investimento, ROI e payback:** investimento = R$ + horas × custo/hora. ROI na janela = (saving da janela − investimento) ÷ investimento; payback = investimento ÷ valor mensal, arredondado para cima; sem investimento o payback é 0 e o ROI não se aplica.
+- **Fonte de custo e fatura:** a fatura é por (fonte, competência) com orçado opcional, realizado e métrica opcional; mostra variação (orçado − realizado) e custo unitário (realizado ÷ métrica). Faturas não somam saving; a otimização de uma fatura é uma iniciativa que aponta para a fonte. Excluir uma fonte remove suas faturas, mas é recusado se houver iniciativas vinculadas.
+- **Painel FinOps:** saving realizado (meses até a referência) e projetado (depois), saving em curso por mês (direto × horas do time), horas e FTE liberados, novo normal incorporado, ROI, série mensal, resumo por tipo, por fonte e por iniciativa. Competências são "AAAA-MM"; o intervalo máximo é de 36 meses.
+
 ## Jornadas e critérios de aceite
 
 Fase 1:
@@ -70,7 +83,16 @@ Fase 2 (Rotinas):
 4. **Medir esforço:** o resumo por categoria mostra contagem, minutos previstos e minutos executados, e o painel soma as ocorrências pela categoria. Aceite: valores conforme as regras acima.
 5. **Isolamento:** rotina e execução de outro tenant nunca são visíveis nem referenciáveis (validado por testes de RLS e FK composta em PostgreSQL).
 
-A definir: critérios de aceite das fases 3–5.
+Fase 3 (FinOps):
+
+1. **Cadastrar perfis e fontes:** com write, o usuário cria perfis de custo/hora e fontes de custo. Aceite: nome duplicado no tenant retorna conflito; custo negativo é recusado.
+2. **Registrar iniciativa:** DIRETO_REAIS exige valor mensal e nenhum participante; POR_TEMPO exige frequência e ao menos um participante. Aceite: encerramento anterior ao início e janela fora de 1–60 são recusados; fonte de outro tenant resulta em não encontrado.
+3. **Simular antes de salvar:** a prévia calcula valor, horas, FTE, janela, ROI e payback sem gravar.
+4. **Acompanhar faturas:** orçado × realizado e custo unitário por fonte. Aceite: fonte + competência duplicada retorna conflito; fatura nunca soma saving.
+5. **Demonstrar o efeito financeiro:** o painel mostra o saving por período e o ROI. Aceite: iniciativa em NOVO_NORMAL não soma saving no período.
+6. **Isolamento:** perfis, fontes, faturas, iniciativas e participantes de outro tenant nunca são visíveis nem referenciáveis (validado por testes de RLS e FK composta em PostgreSQL).
+
+A definir: critérios de aceite das fases 4–5.
 
 ## Restrições e integrações
 
@@ -78,4 +100,4 @@ Base técnica: FastAPI, SQLAlchemy 2, Alembic e frontend vanilla (ES modules, CS
 
 ## Pendências
 
-Permanecem "A definir": perfis de usuário, regras de ingresso específicas, metas configuráveis por tenant, metas de esforço de rotinas, grade de agenda, feriados (os dias úteis os ignoram), fuso horário por tenant (hoje é o relógio do servidor) e regras detalhadas das fases 3–5. Registre dúvidas bloqueantes na tarefa; decisões arquiteturais ficam no Master ADR.
+Permanecem "A definir": perfis de usuário, regras de ingresso específicas, metas configuráveis por tenant, metas de esforço de rotinas, grade de agenda, feriados (os dias úteis os ignoram), fuso horário por tenant (hoje é o relógio do servidor), moeda além de BRL, fechamento contábil, fluxo de aprovação de iniciativas e regras detalhadas das fases 4–5. Registre dúvidas bloqueantes na tarefa; decisões arquiteturais ficam no Master ADR.

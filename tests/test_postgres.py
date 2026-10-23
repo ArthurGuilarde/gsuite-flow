@@ -415,6 +415,173 @@ def test_semana_delete_cascades_to_execucoes(db_factory):
         assert db.execute(text("SELECT count(*) FROM rotinas")).scalar() == 1
 
 
+FINOPS_TABLES = ("perfis_custo", "fontes_custo", "faturas", "iniciativas", "iniciativa_participantes")
+
+
+def add_perfil(db, tenant, nome="Analista"):
+    perfil_id = uuid4()
+    db.execute(
+        text("INSERT INTO perfis_custo(id,tenant_id,created_by,nome,custo_hora) VALUES (:id,:tenant,'user',:nome,80)"),
+        {"id": perfil_id, "tenant": tenant, "nome": nome},
+    )
+    return perfil_id
+
+
+def add_fonte(db, tenant, nome="Fabric"):
+    fonte_id = uuid4()
+    db.execute(
+        text("INSERT INTO fontes_custo(id,tenant_id,created_by,nome) VALUES (:id,:tenant,'user',:nome)"),
+        {"id": fonte_id, "tenant": tenant, "nome": nome},
+    )
+    return fonte_id
+
+
+def add_fatura(db, tenant, fonte_id, competencia="2026-01-01"):
+    fatura_id = uuid4()
+    db.execute(
+        text(
+            "INSERT INTO faturas(id,tenant_id,created_by,fonte_id,competencia,valor_realizado) "
+            "VALUES (:id,:tenant,'user',:fonte,:competencia,100)"
+        ),
+        {"id": fatura_id, "tenant": tenant, "fonte": fonte_id, "competencia": competencia},
+    )
+    return fatura_id
+
+
+def add_iniciativa(db, tenant, titulo="Automacao", fonte_id=None):
+    iniciativa_id = uuid4()
+    db.execute(
+        text(
+            "INSERT INTO iniciativas"
+            "(id,tenant_id,created_by,titulo,tipo,modo_calculo,valor_mensal,mes_inicio,fonte_id) "
+            "VALUES (:id,:tenant,'user',:titulo,'OTIMIZACAO_CUSTO','DIRETO_REAIS',500,'2026-01-01',:fonte)"
+        ),
+        {"id": iniciativa_id, "tenant": tenant, "titulo": titulo, "fonte": fonte_id},
+    )
+    return iniciativa_id
+
+
+def add_participante(db, tenant, iniciativa_id):
+    participante_id = uuid4()
+    db.execute(
+        text(
+            "INSERT INTO iniciativa_participantes"
+            "(id,tenant_id,created_by,iniciativa_id,perfil_nome,custo_hora,qtd_pessoas,horas_antes,horas_depois) "
+            "VALUES (:id,:tenant,'user',:iniciativa,'Analista',80,1,3,1)"
+        ),
+        {"id": participante_id, "tenant": tenant, "iniciativa": iniciativa_id},
+    )
+    return participante_id
+
+
+def seed_finops(db, tenant, sufixo="1"):
+    context(db, tenant)
+    add_perfil(db, tenant, f"Perfil {sufixo}")
+    fonte = add_fonte(db, tenant, f"Fonte {sufixo}")
+    add_fatura(db, tenant, fonte)
+    iniciativa = add_iniciativa(db, tenant, f"Iniciativa {sufixo}", fonte)
+    add_participante(db, tenant, iniciativa)
+    return fonte, iniciativa
+
+
+def test_finops_tables_force_rls_and_not_owned_by_runtime(db_factory):
+    with db_factory.begin() as db:
+        for table in FINOPS_TABLES:
+            flags = db.execute(
+                text("SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname=:t"), {"t": table}
+            ).one()
+            assert tuple(flags) == (True, True), table
+            owned = db.execute(
+                text("SELECT tableowner=current_user FROM pg_tables WHERE tablename=:t"), {"t": table}
+            ).scalar()
+            assert owned is False, table
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        db.execute(text("ALTER TABLE iniciativas DISABLE ROW LEVEL SECURITY"))
+
+
+def test_finops_unfiltered_select_sees_only_current_tenant(db_factory):
+    a, b = uuid4(), uuid4()
+    for tenant, sufixo in [(a, "A"), (b, "B")]:
+        with db_factory.begin() as db:
+            seed_finops(db, tenant, sufixo)
+    with db_factory.begin() as db:
+        context(db, a)
+        for table in FINOPS_TABLES:
+            assert db.execute(text(f"SELECT tenant_id FROM {table}")).scalars().all() == [a], table  # noqa: S608
+    with db_factory.begin() as db:
+        for table in FINOPS_TABLES:
+            assert db.execute(text(f"SELECT count(*) FROM {table}")).scalar() == 0, table  # noqa: S608
+
+
+def test_finops_insert_with_other_tenant_denied(db_factory):
+    tenant, other = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        context(db, tenant)
+        fonte_a = add_fonte(db, tenant)
+        iniciativa_a = add_iniciativa(db, tenant)
+    inserts = [
+        lambda db: add_perfil(db, other),
+        lambda db: add_fonte(db, other, "Outra"),
+        lambda db: add_fatura(db, other, fonte_a),
+        lambda db: add_iniciativa(db, other, "Outra"),
+        lambda db: add_participante(db, other, iniciativa_a),
+    ]
+    for insert_row in inserts:
+        with pytest.raises(DBAPIError), db_factory.begin() as db:
+            context(db, tenant)
+            insert_row(db)
+
+
+def test_finops_composite_fk_blocks_cross_tenant_fonte_and_iniciativa(db_factory):
+    a, b = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        fonte_a, iniciativa_a = seed_finops(db, a, "A")
+    with db_factory.begin() as db:
+        context(db, b)
+        fonte_b = add_fonte(db, b, "Fonte B")
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, b)
+        add_fatura(db, b, fonte_a)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, b)
+        add_iniciativa(db, b, "Aponta para A", fonte_a)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, b)
+        add_participante(db, b, iniciativa_a)
+    with db_factory.begin() as db:
+        context(db, b)
+        add_fatura(db, b, fonte_b)
+        add_iniciativa(db, b, "Aponta para B", fonte_b)
+
+
+def test_finops_fatura_is_unique_per_fonte_competencia(db_factory):
+    a = uuid4()
+    with db_factory.begin() as db:
+        fonte, _ = seed_finops(db, a)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, a)
+        add_fatura(db, a, fonte, "2026-01-01")
+    with db_factory.begin() as db:
+        context(db, a)
+        add_fatura(db, a, fonte, "2026-02-01")
+        assert db.execute(text("SELECT count(*) FROM faturas")).scalar() == 2
+
+
+def test_finops_cascades_and_fonte_with_iniciativa_is_protected(db_factory):
+    a = uuid4()
+    with db_factory.begin() as db:
+        fonte, iniciativa = seed_finops(db, a)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, a)
+        db.execute(text("DELETE FROM fontes_custo WHERE id=:id"), {"id": fonte})
+    with db_factory.begin() as db:
+        context(db, a)
+        assert db.execute(text("DELETE FROM iniciativas WHERE id=:id"), {"id": iniciativa}).rowcount == 1
+        assert db.execute(text("SELECT count(*) FROM iniciativa_participantes")).scalar() == 0
+        assert db.execute(text("DELETE FROM fontes_custo WHERE id=:id"), {"id": fonte}).rowcount == 1
+        assert db.execute(text("SELECT count(*) FROM faturas")).scalar() == 0
+
+
 def test_capacidade_api_authorized_flow(db_factory, monkeypatch):
     from fastapi.testclient import TestClient
 

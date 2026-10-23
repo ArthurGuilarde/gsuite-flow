@@ -31,6 +31,12 @@ Decisão em [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md). Mesmas cama
 
 Tabelas (migração `0003_rotinas`): `rotinas` e `rotina_execucoes`, com `id` UUID, `tenant_id` e `created_by`. `rotina_execucoes` referencia rotina e semana por chaves estrangeiras compostas `(tenant_id, id)` com `ON DELETE CASCADE`, e é única por (tenant, rotina, semana, ocorrência); a ausência de linha significa PENDENTE. No PostgreSQL ambas têm ENABLE/FORCE RLS com USING e WITH CHECK. As ocorrências de rotinas entram no painel da Capacidade pela categoria da rotina.
 
+## Domínio FinOps (Fase 3)
+
+Decisão em [ADR-005](adrs/ADR-005-finops-valor-das-decisoes.md). Mesmas camadas dos domínios anteriores. O cálculo (participantes, janela, status, investimento, ROI e payback) fica em `services/finops_calculos.py`, módulo puro sem I/O; as agregações do painel são feitas em Python, por causa da guarda SQLite.
+
+Tabelas (migração `0004_finops`): `perfis_custo`, `fontes_custo`, `faturas`, `iniciativas` e `iniciativa_participantes`, com `id` UUID, `tenant_id` e `created_by`. `faturas` referencia a fonte e `iniciativa_participantes` referencia a iniciativa por chaves estrangeiras compostas `(tenant_id, id)` com `ON DELETE CASCADE`; `iniciativas` referencia a fonte sem cascata (o serviço responde 409 ao excluir fonte com iniciativas). No PostgreSQL as cinco têm ENABLE/FORCE RLS com USING e WITH CHECK. Os gráficos do frontend são SVG locais, compatíveis com a CSP.
+
 ## Desenvolvimento isolado
 
 O perfil dev usa um adaptador de identidade/grants com fixtures locais, sem criar um provedor OIDC falso. A sessão opaca, CSRF e verificação de tenant continuam no mesmo fluxo da aplicação. Configuração e middleware limitam esse adaptador ao ambiente development e ao loopback; endpoints locais não são montados em OIDC/produção.
