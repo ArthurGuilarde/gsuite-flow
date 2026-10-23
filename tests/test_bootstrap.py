@@ -6,7 +6,14 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
+# These tests exercise the uninitialized template; once bootstrap ran here, the copied files are no longer template files.
+pytestmark = pytest.mark.skipif(
+    json.loads((ROOT / "suite-app.json").read_text(encoding="utf-8"))["app_id"] != "suite-example",
+    reason="repositório já inicializado pelo bootstrap",
+)
 TEMPLATE_FILES = [
     "scripts/bootstrap.py",
     ".env.example",

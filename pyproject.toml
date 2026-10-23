@@ -2,9 +2,9 @@
 requires = ["setuptools>=75", "wheel"]
 build-backend = "setuptools.build_meta"
 [project]
-name = "template-suite-guilarde"
-version = "2.0.0"
-description = "Guilarde Suite application: FastAPI, PostgreSQL, OIDC BFF and tenant isolation"
+name = "gflow"
+version = "0.1.0"
+description = "GFlow: Guilarde Suite application"
 requires-python = ">=3.12"
 readme = "README.md"
 dependencies = [

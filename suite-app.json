@@ -1,10 +1,20 @@
 {
- "schema_version": 1,
- "app_id": "suite-example",
- "name": "Guilarde Suite",
- "permissions": ["access", "read", "write"],
- "features": [],
- "tenant_model": "shared-workspace",
- "auth": {"flow": "authorization-code-pkce-bff", "callback_path": "/auth/callback"},
- "health": {"live": "/health/live", "ready": "/health/ready"}
+  "schema_version": 1,
+  "app_id": "gflow",
+  "name": "GFlow",
+  "permissions": [
+    "access",
+    "read",
+    "write"
+  ],
+  "features": [],
+  "tenant_model": "shared-workspace",
+  "auth": {
+    "flow": "authorization-code-pkce-bff",
+    "callback_path": "/auth/callback"
+  },
+  "health": {
+    "live": "/health/live",
+    "ready": "/health/ready"
+  }
 }
