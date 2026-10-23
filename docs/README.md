@@ -14,6 +14,7 @@ Leia apenas o que a tarefa exige. Evite duplicar regras: cada documento abaixo �
 | [Deploy](deploy.md) | Ao aprovisionar infraestrutura, gerir segredos, publicar e reverter |
 | [Testes](testing.md) | Para escolher e executar validações |
 | [ADR-003 — porte em fases](adrs/ADR-003-porte-mvp-indicadores-em-fases.md) | Para entender o escopo por fases do porte do MVP |
+| [ADR-004 — rotinas: esforço e pendências](adrs/ADR-004-rotinas-esforco-e-pendencias.md) | Para entender esforço estimado/real, pendências e o painel de Rotinas |
 | [Master ADR](adrs/MASTER-ADR.md) | Antes de alterar decisões arquiteturais |
 | [Convenção de ADRs](adrs/README.md) | Para registrar decisões |
 | [Template de ADR](adrs/TEMPLATE-ADR.md) | Ao criar um ADR |

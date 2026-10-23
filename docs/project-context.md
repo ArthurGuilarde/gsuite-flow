@@ -11,11 +11,12 @@ Acompanhar indicadores de engenharia: capacidade **BUILD ≥ 70% / RUN ≤ 30%**
 
 ## Escopo
 
-O porte é feito em fases ([ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md)).
+O porte é feito em fases ([ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md)); a Fase 2 está registrada no [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md).
 
 - **Fase 1 (Capacidade):** grupos (squads), semanas/ciclos, lançamentos ABERTO/RESOLVIDO e dashboard BUILD × RUN.
-- **Próximas fases:** rotinas (N0, somadas ao dashboard apenas na Fase 2), Planner pessoal, FinOps e Despesas & Contratos. A definir: ordem e regras detalhadas das fases 2–5.
-- **Removido do MVP:** alias `/api` legado, `audit_log`, `/metrics/latest`, `/raw`, exportação HTML standalone e "copiar contexto LLM" (volta com Rotinas).
+- **Fase 2 (Rotinas, em andamento):** catálogo de rotinas recorrentes, execução por semana/ocorrência, esforço estimado e real, pendências (vence hoje e atrasadas) e soma no painel BUILD × RUN pela categoria da rotina. Fora da fase: grade de agenda do MVP (A definir).
+- **Próximas fases:** Planner pessoal, FinOps e Despesas & Contratos. A definir: ordem e regras detalhadas das fases 3–5.
+- **Removido do MVP:** alias `/api` legado, `audit_log`, `/metrics/latest`, `/raw`, exportação HTML standalone e "copiar contexto LLM" (volta com Rotinas). Removidos também, no porte de Rotinas: grade de agenda e `bloco`, `data_especifica`, status no catálogo e o campo `recorrencia`.
 
 ## Tenant e acesso
 
@@ -36,11 +37,21 @@ Regras do dashboard (todas as semanas ou uma semana):
 - Considera apenas grupos ativos; total = soma das quantidades; BUILD/RUN pela categoria do grupo.
 - Percentual = parte / total (0 se o total é 0). Meta atingida: BUILD ≥ 70% e RUN ≤ 30%; a diferença é informada em pontos percentuais.
 - Os mesmos cálculos valem para o subconjunto de resolvidos e o de abertos; a taxa de resolução é resolvidos / total.
-- Rotinas (N0) não somam nesta fase.
-- Grupos padrão (seis do MVP, entre eles "EngDados - Projetos" BUILD e "Rotinas (N0)" RUN) só são criados por ação explícita e apenas os que faltam, por nome.
+- As ocorrências de rotinas somam pela categoria da própria rotina (ver Termos da Fase 2): pendente conta como aberto e concluída como resolvida. Sem semana selecionada, somam todas as semanas.
+- Grupos padrão (seis do MVP, entre eles "EngDados - Projetos" BUILD e "Rotinas (N0)" RUN) só são criados por ação explícita e apenas os que faltam, por nome. O grupo "Rotinas (N0)" continua existindo para lançamentos manuais; as rotinas cadastradas não somam mais nele.
 - Excluir um grupo ou semana remove seus lançamentos.
 
 A definir: metas configuráveis por tenant (hoje fixas em 70%/30%).
+
+Termos da Fase 2 (Rotinas):
+
+- **Rotina:** tarefa recorrente com título, categoria BUILD ou RUN (padrão RUN), responsável, link opcional (somente http/https), período (Manhã, Tarde ou Integral), esforço estimado em minutos por ocorrência (0–1440), ordem e indicador ativo.
+- **Tipo de agendamento:** SEMANAL (exige dia da semana), DIARIA (os cinco dias úteis), QUINZENAL (dias 1 e 15), MENSAL_DIA_FIXO (exige dia do mês; dia 31 em mês curto vale o último dia), MENSAL_PRIMEIRO_UTIL e MENSAL_ULTIMO_UTIL. Apelidos como MENSAL, 1_UTIL e ULTIMO_DIA são normalizados. Dias úteis são segunda a sexta e ignoram feriados.
+- **Vigência:** a rotina existe a partir da semana em que começa (`inicio_vigencia`, hoje se não informado). Rotina inativa só aparece em uma semana se tiver execução registrada nela.
+- **Ocorrência:** uma data prevista da rotina numa semana. Rotinas diárias têm uma por dia útil; as demais têm uma por semana em que a data cai. Semana sem datas mostra a rotina sem data prevista.
+- **Execução:** registro por (rotina, semana, ocorrência) com status PENDENTE ou CONCLUIDA, esforço real em minutos (opcional) e observação. Sem registro, a ocorrência está PENDENTE. Reiniciar a semana volta tudo a PENDENTE.
+- **Esforço estimado e real:** minutos previstos somam o estimado de todas as ocorrências; minutos executados somam, nas concluídas, o real quando informado e o estimado quando não.
+- **Situação:** CONCLUIDA; SEM_DATA (pendente sem data prevista); VENCE_HOJE; ATRASADA (data anterior a hoje); PREVISTA. Ocorrências pendentes que vencem hoje ou estão atrasadas, de qualquer semana com datas, aparecem na lista de pendências até serem concluídas.
 
 ## Jornadas e critérios de aceite
 
@@ -51,7 +62,15 @@ Fase 1:
 3. **Acompanhar:** qualquer membro com read vê o dashboard e as metas atingidas ou o gap. Aceite: totais e percentuais seguem as regras acima.
 4. **Isolamento:** tenant sem acesso recebe 403 e nunca vê dados de outro tenant (validado por testes de RLS em PostgreSQL).
 
-A definir: critérios de aceite das fases 2–5.
+Fase 2 (Rotinas):
+
+1. **Cadastrar:** com write, o usuário cria rotinas (ou as padrão, só por ação explícita). Aceite: SEMANAL sem dia da semana e MENSAL_DIA_FIXO sem dia do mês são recusados; link fora de http/https é recusado; tipo inválido é recusado.
+2. **Executar:** o usuário conclui uma ocorrência, informando opcionalmente o tempo real. Aceite: ocorrência que não pertence à rotina naquela semana é recusada; voltar a PENDENTE limpa a conclusão e o tempo real.
+3. **Não deixar nada para trás:** a lista de pendências mostra o que vence hoje e o que está atrasado até a conclusão. Aceite: ordem das atrasadas por data prevista e depois título.
+4. **Medir esforço:** o resumo por categoria mostra contagem, minutos previstos e minutos executados, e o painel soma as ocorrências pela categoria. Aceite: valores conforme as regras acima.
+5. **Isolamento:** rotina e execução de outro tenant nunca são visíveis nem referenciáveis (validado por testes de RLS e FK composta em PostgreSQL).
+
+A definir: critérios de aceite das fases 3–5.
 
 ## Restrições e integrações
 
@@ -59,4 +78,4 @@ Base técnica: FastAPI, SQLAlchemy 2, Alembic e frontend vanilla (ES modules, CS
 
 ## Pendências
 
-Permanecem "A definir": perfis de usuário, regras de ingresso específicas, metas configuráveis por tenant e regras detalhadas das fases 2–5. Registre dúvidas bloqueantes na tarefa; decisões arquiteturais ficam no Master ADR.
+Permanecem "A definir": perfis de usuário, regras de ingresso específicas, metas configuráveis por tenant, metas de esforço de rotinas, grade de agenda, feriados (os dias úteis os ignoram), fuso horário por tenant (hoje é o relógio do servidor) e regras detalhadas das fases 3–5. Registre dúvidas bloqueantes na tarefa; decisões arquiteturais ficam no Master ADR.

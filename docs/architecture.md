@@ -25,6 +25,12 @@ Decisão em [ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md); regras em
 
 Tabelas (migração `0002_capacidade`): `grupos`, `semanas` e `lancamentos`, todas com `id` UUID, `tenant_id` e `created_by`. `lancamentos` referencia grupo e semana por chaves estrangeiras compostas `(tenant_id, id)` com `ON DELETE CASCADE`. No PostgreSQL as três têm ENABLE/FORCE RLS com USING e WITH CHECK; no SQLite valem apenas os guardrails do ORM. Fases seguintes (rotinas, Planner pessoal, FinOps, Despesas & Contratos) entram como domínios próprios, cada uma com seus ADRs quando houver decisão arquitetural.
 
+## Domínio Rotinas (Fase 2)
+
+Decisão em [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md). Mesmas camadas da Capacidade. O cálculo de agenda (dias úteis, datas previstas por tipo de agendamento, vigência, situação e resumo de esforço) fica em `services/rotinas_agenda.py`, módulo puro sem I/O, SQLAlchemy ou FastAPI, para ser testável sem banco; o serviço o alimenta com dataclasses carregadas via ORM.
+
+Tabelas (migração `0003_rotinas`): `rotinas` e `rotina_execucoes`, com `id` UUID, `tenant_id` e `created_by`. `rotina_execucoes` referencia rotina e semana por chaves estrangeiras compostas `(tenant_id, id)` com `ON DELETE CASCADE`, e é única por (tenant, rotina, semana, ocorrência); a ausência de linha significa PENDENTE. No PostgreSQL ambas têm ENABLE/FORCE RLS com USING e WITH CHECK. As ocorrências de rotinas entram no painel da Capacidade pela categoria da rotina.
+
 ## Desenvolvimento isolado
 
 O perfil dev usa um adaptador de identidade/grants com fixtures locais, sem criar um provedor OIDC falso. A sessão opaca, CSRF e verificação de tenant continuam no mesmo fluxo da aplicação. Configuração e middleware limitam esse adaptador ao ambiente development e ao loopback; endpoints locais não são montados em OIDC/produção.

@@ -288,6 +288,133 @@ def test_capacidade_group_delete_cascades_to_lancamentos(db_factory):
         assert db.execute(text("SELECT count(*) FROM semanas")).scalar() == 1
 
 
+ROTINAS_TABLES = ("rotinas", "rotina_execucoes")
+
+
+def add_rotina(db, tenant, titulo="Triagem", rotina_id=None):
+    rotina_id = rotina_id or uuid4()
+    db.execute(
+        text(
+            "INSERT INTO rotinas(id,tenant_id,created_by,titulo,tipo_agendamento,dia_semana,inicio_vigencia) "
+            "VALUES (:id,:tenant,'user',:titulo,'SEMANAL','Segunda','2026-01-01')"
+        ),
+        {"id": rotina_id, "tenant": tenant, "titulo": titulo},
+    )
+    return rotina_id
+
+
+def add_execucao(db, tenant, rotina_id, semana_id, ocorrencia="SEMANA"):
+    execucao_id = uuid4()
+    db.execute(
+        text(
+            "INSERT INTO rotina_execucoes(id,tenant_id,created_by,rotina_id,semana_id,ocorrencia) "
+            "VALUES (:id,:tenant,'user',:rotina,:semana,:ocorrencia)"
+        ),
+        {"id": execucao_id, "tenant": tenant, "rotina": rotina_id, "semana": semana_id, "ocorrencia": ocorrencia},
+    )
+    return execucao_id
+
+
+def seed_rotinas(db, tenant, sufixo="1"):
+    context(db, tenant)
+    semana = add_semana(db, tenant, identificacao=f"S{sufixo}")
+    rotina = add_rotina(db, tenant, titulo=f"Rotina {sufixo}")
+    return rotina, semana, add_execucao(db, tenant, rotina, semana)
+
+
+def test_rotinas_tables_force_rls_and_not_owned_by_runtime(db_factory):
+    with db_factory.begin() as db:
+        for table in ROTINAS_TABLES:
+            flags = db.execute(
+                text("SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname=:t"), {"t": table}
+            ).one()
+            assert tuple(flags) == (True, True), table
+            owned = db.execute(
+                text("SELECT tableowner=current_user FROM pg_tables WHERE tablename=:t"), {"t": table}
+            ).scalar()
+            assert owned is False, table
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        db.execute(text("ALTER TABLE rotinas DISABLE ROW LEVEL SECURITY"))
+
+
+def test_rotinas_unfiltered_select_sees_only_current_tenant(db_factory):
+    a, b = uuid4(), uuid4()
+    for tenant, sufixo in [(a, "A"), (b, "B")]:
+        with db_factory.begin() as db:
+            seed_rotinas(db, tenant, sufixo)
+    with db_factory.begin() as db:
+        context(db, a)
+        for table in ROTINAS_TABLES:
+            assert db.execute(text(f"SELECT tenant_id FROM {table}")).scalars().all() == [a], table  # noqa: S608
+    with db_factory.begin() as db:
+        for table in ROTINAS_TABLES:
+            assert db.execute(text(f"SELECT count(*) FROM {table}")).scalar() == 0, table  # noqa: S608
+
+
+def test_rotinas_insert_with_other_tenant_denied(db_factory):
+    tenant, other = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        context(db, tenant)
+        rotina_a = add_rotina(db, tenant)
+        semana_a = add_semana(db, tenant)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, tenant)
+        add_rotina(db, other)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, tenant)
+        add_execucao(db, other, rotina_a, semana_a)
+
+
+def test_rotinas_composite_fk_blocks_cross_tenant_execucao(db_factory):
+    a, b = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        rotina_a, semana_a, _ = seed_rotinas(db, a, "A")
+    with db_factory.begin() as db:
+        context(db, b)
+        rotina_b = add_rotina(db, b, titulo="Rotina B")
+        semana_b = add_semana(db, b, "SB")
+    cases = [(rotina_a, semana_b), (rotina_b, semana_a), (rotina_a, semana_a)]
+    for rotina, semana in cases:
+        with pytest.raises(DBAPIError), db_factory.begin() as db:
+            context(db, b)
+            add_execucao(db, b, rotina, semana)
+
+
+def test_rotinas_ocorrencia_is_unique_per_rotina_semana(db_factory):
+    a = uuid4()
+    with db_factory.begin() as db:
+        rotina, semana, _ = seed_rotinas(db, a)
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        context(db, a)
+        add_execucao(db, a, rotina, semana, "SEMANA")
+    with db_factory.begin() as db:
+        context(db, a)
+        add_execucao(db, a, rotina, semana, "Segunda")
+        assert db.execute(text("SELECT count(*) FROM rotina_execucoes")).scalar() == 2
+
+
+def test_rotinas_delete_cascades_to_execucoes(db_factory):
+    a = uuid4()
+    with db_factory.begin() as db:
+        rotina, semana, _ = seed_rotinas(db, a)
+    with db_factory.begin() as db:
+        context(db, a)
+        assert db.execute(text("DELETE FROM rotinas WHERE id=:id"), {"id": rotina}).rowcount == 1
+        assert db.execute(text("SELECT count(*) FROM rotina_execucoes")).scalar() == 0
+        assert db.execute(text("SELECT count(*) FROM semanas")).scalar() == 1
+
+
+def test_semana_delete_cascades_to_execucoes(db_factory):
+    a = uuid4()
+    with db_factory.begin() as db:
+        rotina, semana, _ = seed_rotinas(db, a)
+    with db_factory.begin() as db:
+        context(db, a)
+        assert db.execute(text("DELETE FROM semanas WHERE id=:id"), {"id": semana}).rowcount == 1
+        assert db.execute(text("SELECT count(*) FROM rotina_execucoes")).scalar() == 0
+        assert db.execute(text("SELECT count(*) FROM rotinas")).scalar() == 1
+
+
 def test_capacidade_api_authorized_flow(db_factory, monkeypatch):
     from fastapi.testclient import TestClient
 

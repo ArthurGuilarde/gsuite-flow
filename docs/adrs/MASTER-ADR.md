@@ -23,11 +23,15 @@
 
 | 003 | [Porte do MVP Indicadores de Engenharia em fases](ADR-003-porte-mvp-indicadores-em-fases.md) | 2026-10-23 | ✅ Aceito | Produto e domínio | Porte por fases (Fase 1 Capacidade), tenant = cliente PF/PJ, sem migração de dados, UUID e FKs compostas, ORM, RLS e frontend ES modules com CSP estrita. |
 
+| 004 | [Rotinas: esforço medido e pendências](ADR-004-rotinas-esforco-e-pendencias.md) | 2026-10-23 | ✅ Aceito | Produto e domínio | Esforço em contagem + minutos estimados/reais, rotinas no painel pela categoria, data prevista e pendências calculadas no backend, grade de agenda fora da fase. |
+
 ## Mapa de Dependências
 
 ADR-002 usa a estrutura de partida descrita em [ADR-001](ADR-001-base-minima-sem-dominio.md), sem alterar seu status.
 
 ADR-003 depende de [ADR-001](ADR-001-base-minima-sem-dominio.md) e [ADR-002](ADR-002-perfis-dev-integrated-production.md), sem alterar o status do ADR-001.
+
+ADR-004 depende de [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md).
 
 ## Índice por Área
 
@@ -42,6 +46,7 @@ ADR-003 depende de [ADR-001](ADR-001-base-minima-sem-dominio.md) e [ADR-002](ADR
 ### Produto e domínio
 
 - [ADR-003](ADR-003-porte-mvp-indicadores-em-fases.md) — Porte do MVP Indicadores de Engenharia em fases
+- [ADR-004](ADR-004-rotinas-esforco-e-pendencias.md) — Rotinas: esforço medido e pendências
 
 ## Como Criar um Novo ADR
 
