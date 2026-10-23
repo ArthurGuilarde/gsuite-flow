@@ -15,6 +15,11 @@ def test_template_domain_is_only_capacidade():
         "lancamentos",
         "rotinas",
         "rotina_execucoes",
+        "perfis_custo",
+        "fontes_custo",
+        "faturas",
+        "iniciativas",
+        "iniciativa_participantes",
     }
     paths = app.openapi()["paths"]
     assert "/api/v1/context" in paths
