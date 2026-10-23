@@ -3,22 +3,50 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Guilarde Suite</title>
+  <title>GFlow</title>
   <link rel="stylesheet" href="/css/suite.css">
 </head>
 <body>
-  <main>
-    <h1>Guilarde Suite</h1>
-    <p id="status" role="status" aria-live="polite">Carregando sessão…</p>
-    <a id="login" href="/auth/login" hidden>Entrar com Guilarde</a>
-    <section id="workspace" hidden>
-      <div class="toolbar">
-        <label>Espaço <select id="tenant"></select></label>
-        <button id="logout" type="button">Sair</button>
+  <div class="app">
+    <aside id="sidebar" class="sidebar" aria-label="Navegação principal">
+      <div class="marca">GFlow</div>
+      <nav id="nav" class="nav" hidden>
+        <a href="#/" data-rota="/">Painel</a>
+        <a href="#/lancamentos" data-rota="/lancamentos">Lançamentos</a>
+        <div class="nav-secao">Configuração</div>
+        <a href="#/config/grupos" data-rota="/config/grupos">Grupos</a>
+        <a href="#/config/semanas" data-rota="/config/semanas">Semanas</a>
+      </nav>
+    </aside>
+    <div class="principal">
+      <header class="topbar">
+        <button id="menu" class="icone-botao" type="button" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+        <div class="titulos">
+          <h1 id="pagina-titulo">GFlow</h1>
+          <p id="pagina-subtitulo" class="subtitulo"></p>
+        </div>
+        <div id="workspace" class="toolbar" hidden>
+          <label class="campo-inline">Espaço <select id="tenant"></select></label>
+          <button id="logout" type="button" class="secundario">Sair</button>
+        </div>
+      </header>
+      <main class="conteudo-area">
+        <p id="status" role="status" aria-live="polite">Carregando sessão…</p>
+        <a id="login" class="botao" href="/auth/login" hidden>Entrar com Guilarde</a>
+        <div id="content"></div>
+      </main>
+    </div>
+  </div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <dialog id="confirmacao" class="modal">
+    <form method="dialog">
+      <p id="confirmacao-texto"></p>
+      <div class="acoes">
+        <button type="submit" value="cancel" class="secundario">Cancelar</button>
+        <button type="submit" value="ok" id="confirmacao-ok" class="perigo">Confirmar</button>
       </div>
-      <div id="content"></div>
-    </section>
-  </main>
+    </form>
+  </dialog>
   <script type="module" src="/js/app.js"></script>
 </body>
 </html>
