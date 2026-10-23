@@ -3,6 +3,7 @@ import {state} from './state.js';
 function mensagemDeErro(body, status) {
     const detail = body?.detail;
     if (typeof detail === 'string' && detail) return detail;
+    if (typeof detail?.mensagem === 'string' && detail.mensagem) return detail.mensagem;
     if (Array.isArray(detail) && detail.length) {
         return detail.map(item => {
             if (typeof item === 'string') return item;

@@ -47,7 +47,7 @@ const rotuloDia = iso => {
     return `${dia.charAt(0).toUpperCase()}${dia.slice(1)}, ${data(iso)}`;
 };
 
-function dialogoConclusao(o) {
+export function dialogoConclusao(o) {
     return new Promise(resolve => {
         const real = h('input', {type: 'number', min: 0, max: 1440, step: 1, placeholder: `Previsto: ${o.esforco_estimado_min} min`});
         const obs = h('textarea', {rows: 3});

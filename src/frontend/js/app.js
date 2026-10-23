@@ -14,6 +14,7 @@ import {despesasPainel} from './pages/despesas-painel.js';
 import {despesasInventario} from './pages/despesas-inventario.js';
 import {despesasOrcamento} from './pages/despesas-orcamento.js';
 import {perfis} from './pages/perfis.js';
+import {meuDia} from './pages/meu-dia.js';
 
 const el = id => document.getElementById(id);
 const status = message => { el('status').textContent = message; };
@@ -21,6 +22,7 @@ let selectionVersion = 0;
 let routerIniciado = false;
 
 registrarRotas({
+    '/meu-dia': meuDia,
     '/': painel,
     '/rotinas': rotinas,
     '/lancamentos': lancamentos,
