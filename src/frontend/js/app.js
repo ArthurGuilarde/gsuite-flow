@@ -7,6 +7,10 @@ import {grupos} from './pages/grupos.js';
 import {semanas} from './pages/semanas.js';
 import {rotinas} from './pages/rotinas.js';
 import {rotinasCatalogo} from './pages/rotinas-catalogo.js';
+import {finopsPainel} from './pages/finops-painel.js';
+import {finopsIniciativas} from './pages/finops-iniciativas.js';
+import {finopsFaturas} from './pages/finops-faturas.js';
+import {perfis} from './pages/perfis.js';
 
 const el = id => document.getElementById(id);
 const status = message => { el('status').textContent = message; };
@@ -17,9 +21,13 @@ registrarRotas({
     '/': painel,
     '/rotinas': rotinas,
     '/lancamentos': lancamentos,
+    '/finops': finopsPainel,
+    '/finops/iniciativas': finopsIniciativas,
+    '/finops/faturas': finopsFaturas,
     '/config/grupos': grupos,
     '/config/semanas': semanas,
-    '/config/rotinas': rotinasCatalogo
+    '/config/rotinas': rotinasCatalogo,
+    '/config/perfis': perfis
 });
 
 async function selectTenant(tenantId) {

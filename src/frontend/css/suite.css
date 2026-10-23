@@ -179,3 +179,74 @@ tr.inativa td{opacity:.6}
   .pendencia-titulo{grid-column:1/-1}
   .ocorrencia{flex-direction:column}
 }
+
+/* FinOps */
+.pequeno-texto{font-size:.85rem}
+.regra-janela{background:#e6f6f4;border-left:4px solid var(--accent);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:.9rem;color:var(--primary)}
+.titulo-secao{margin:8px 0 12px}
+.kpi-detalhe{color:var(--muted);font-size:.8rem;margin-top:2px}
+.kpi-neutro{border-left-color:var(--primary)}
+.kpis-fin{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.kpis-fin .kpi-valor{font-size:1.45rem;overflow-wrap:normal}
+.cartao.destaque{border-left:4px solid var(--accent)}
+.destaque-valor{font-size:1.6rem;color:var(--primary)}
+.duas-colunas{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
+.seg-direto{background:var(--accent-dark)}
+.seg-horas{background:#6366f1}
+.marca-cor{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle}
+.marca-direto{background:var(--accent-dark)}
+.marca-horas{background:#6366f1}
+.grafico-wrap{overflow-x:auto}
+.grafico{display:block;width:100%;min-width:520px;height:auto}
+.g-grade{stroke:var(--border);stroke-width:1}
+.g-eixo{font-size:11px;fill:var(--muted)}
+.g-direto{fill:var(--accent-dark)}
+.g-horas{fill:#6366f1}
+.g-direto.g-proj,.g-horas.g-proj{opacity:.4}
+.g-alvo{fill:transparent}
+.g-alvo:hover{fill:rgba(0,54,65,.06)}
+.g-linha{fill:none;stroke-width:2.5}
+.g-orcado{stroke:var(--muted);stroke-dasharray:6 4;fill:var(--muted)}
+.g-realizado{stroke:var(--primary);fill:var(--primary)}
+.g-linha.g-orcado,.g-linha.g-realizado{fill:none}
+.legenda{list-style:none;margin:0;padding:0;display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.legenda li{display:flex;gap:6px;align-items:center}
+.legenda-marca{width:14px;height:14px}
+.legenda-marca .g-orcado,.legenda-marca .g-realizado{stroke:none}
+.status-resumo{display:flex;gap:12px;flex-wrap:wrap;font-size:.85rem}
+.status-planejada{background:#e6edf0;color:var(--primary)}
+.status-em-saving{background:#d1fae5;color:var(--green-dark)}
+.status-novo-normal{background:#e0e7ff;color:#3730a3}
+.status-encerrada{background:#f1f5f9;color:var(--muted)}
+.modo-direto-reais{background:#ccf3ee;color:var(--accent-dark)}
+.modo-por-tempo{background:#e0e7ff;color:#3730a3}
+.var-boa{color:var(--green-dark);font-weight:600}
+.var-ruim{color:var(--danger);font-weight:600}
+details.fonte summary{cursor:pointer;margin-bottom:10px}
+.resumo-fonte{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px}
+.resumo-fonte>div{display:flex;flex-direction:column}
+.mini-rotulo{color:var(--muted);font-size:.8rem}
+.mini-grade{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.mini{display:flex;flex-direction:column;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg)}
+.mini-destaque{grid-column:1/-1;background:#e6f6f4;border-color:#a7e3dc}
+.mini-destaque .mini-valor{font-size:1.4rem;color:var(--primary)}
+.mini-bom{background:#ecfdf5;border-color:#a7f3d0}
+.mini-ruim{background:#fffbeb;border-color:#fde68a}
+.filtros-linha{margin-bottom:12px}
+.form-previa{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:16px;align-items:start}
+.form-previa .previa{position:sticky;top:12px;margin-bottom:0}
+.formulario-iniciativa{display:flex;flex-direction:column;gap:14px}
+.bloco{border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin:0;min-width:0}
+.bloco legend{padding:0 6px;color:var(--primary);font-weight:600;font-size:.9rem}
+.participantes{display:flex;flex-direction:column;gap:10px;margin:10px 0}
+.participante{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;align-items:end;padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+.participante input,.participante select{width:100%;min-width:0}
+.participante-fim{display:flex;gap:8px;align-items:center;flex-wrap:wrap;grid-column:1/-1;justify-content:space-between}
+.participante-total{font-weight:700;color:var(--primary)}
+.formulario-iniciativa input,.formulario-iniciativa select,.formulario-iniciativa textarea{width:100%;min-width:0}
+@media(max-width:800px){
+  .duas-colunas,.form-previa{grid-template-columns:1fr}
+  .form-previa .previa{position:static;order:-1}
+  .kpi-valor{font-size:1.5rem}
+}
+@media print{.grafico-wrap{overflow:visible}.grafico{min-width:0}details.fonte:not([open])>*:not(summary){display:block}}

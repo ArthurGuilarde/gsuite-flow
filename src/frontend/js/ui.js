@@ -53,6 +53,22 @@ export const pct = valor => `${fmtPct.format(valor ?? 0)}%`;
 // Fração 0-1 convertida para percentual.
 export const pctFracao = valor => pct((valor ?? 0) * 100);
 export const pp = valor => `${valor > 0 ? '+' : valor < 0 ? '−' : ''}${fmtPct.format(Math.abs(valor ?? 0))} p.p.`;
+const fmtMoeda = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'});
+const fmtMoedaCurta = new Intl.NumberFormat('pt-BR', {notation: 'compact', maximumFractionDigits: 1});
+const fmtDecimal = new Intl.NumberFormat('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+// Valores monetários em R$ (negativos aparecem com sinal).
+export const moeda = valor => fmtMoeda.format(valor ?? 0);
+export const moedaCurta = valor => fmtMoedaCurta.format(valor ?? 0);
+export const decimal = valor => fmtDecimal.format(valor ?? 0);
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+// "2026-03" -> "mar/26"; com longo=true, "mar/2026".
+export function competencia(valor, longo = false) {
+    const [a, m] = String(valor ?? '').split('-');
+    const nome = MESES[Number(m) - 1];
+    return a && nome ? `${nome}/${longo ? a : a.slice(2)}` : '—';
+}
+// Mês atual do navegador em YYYY-MM.
+export const mesAtual = () => hojeLocal().slice(0, 7);
 export function data(iso) {
     if (!iso) return '—';
     const [a, m, d] = String(iso).slice(0, 10).split('-');
