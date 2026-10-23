@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "template-suite-guilarde"
+version = "2.0.0"
+description = "Guilarde Suite application: FastAPI, PostgreSQL, OIDC BFF and tenant isolation"
+requires-python = ">=3.12"
+readme = "README.md"
+dependencies = [
+ "fastapi>=0.121,<1", "uvicorn[standard]>=0.30,<1", "sqlalchemy>=2.0,<3",
+ "psycopg[binary]>=3.2,<4", "alembic>=1.14,<2", "pydantic-settings>=2.6,<3",
+ "authlib>=1.9,<2", "httpx>=0.28,<1", "pyjwt[crypto]>=2.10,<3", "cryptography>=43", "joserfc>=1.7,<2",
+ "python-dotenv>=1.0,<2"
+]
+[project.optional-dependencies]
+dev = [
+ "pytest>=8,<10", "pytest-cov>=6,<8", "ruff>=0.11,<1", "mypy>=1.13,<2",
+ "pre-commit>=4,<5", "pip-audit>=2.7,<3"
+]
+[project.scripts]
+app = "src.__main__:main"
+[tool.setuptools.packages.find]
+include = ["src*"]
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+[tool.ruff.lint.per-file-ignores]
+"src/backend/api/**/*.py" = ["B008"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["integration: requires PostgreSQL migration and non-owner runtime roles"]
+[tool.mypy]
+python_version = "3.12"
+files = ["src"]
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+ignore_missing_imports = true
+[tool.coverage.run]
+source = ["src"]
+branch = true
+[tool.coverage.report]
+skip_empty = true
+# Measured floor for the unit suite; CLI tests run in subprocesses and are not counted.
+fail_under = 55

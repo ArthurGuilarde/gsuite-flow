@@ -1,0 +1,55 @@
+name: validate
+on: [push, pull_request]
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci-owner-only
+          POSTGRES_DB: suite_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TEST_MIGRATION_DATABASE_URL: postgresql+psycopg://postgres:ci-owner-only@localhost:5432/suite_test
+      TEST_DATABASE_URL: postgresql+psycopg://guilarde_app:ci-app-only@localhost:5432/suite_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.lock && python -m pip install -e '.[dev]'
+      - run: python scripts/validate.py --integration
+      - run: python -m pip_audit -r requirements.lock
+      - run: docker build -t suite-test .
+      # Pinned by commit: action tags can be moved, a commit cannot.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: suite-test
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - run: docker compose --env-file .env.example config --quiet
+        env:
+          POSTGRES_PASSWORD: ci-owner-only
+          APP_DB_PASSWORD: ci-app-only
+          SESSION_ENCRYPTION_KEY: placeholder-compose-check
+
+  windows-dev:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.lock
+      - run: python -m pip install -e ".[dev]"
+      - run: python scripts/validate.py

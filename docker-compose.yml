@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-guilarde}
+      POSTGRES_USER: ${POSTGRES_USER:-guilarde_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run bootstrap first}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Run bootstrap first}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres/init-app.sh:/docker-entrypoint-initdb.d/10-app.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  migrate:
+    build: .
+    environment:
+      APP_PROFILE: integrated
+      AUTH_MODE: oidc
+      DATABASE_URL: postgresql+psycopg://guilarde_app:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-guilarde}
+      MIGRATION_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-guilarde_owner}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-guilarde}
+    command: ["python", "-m", "src", "migrate", "--profile", "integrated"]
+    depends_on:
+      postgres: {condition: service_healthy}
+  app:
+    build: .
+    environment:
+      APP_PROFILE: integrated
+      AUTH_MODE: oidc
+      DATABASE_URL: postgresql+psycopg://guilarde_app:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-guilarde}
+      APP_ID: ${APP_ID:-suite-example}
+      PROJECT_NAME: ${PROJECT_NAME:-Guilarde Suite}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY:?Run bootstrap first}
+      OIDC_ISSUER: ${OIDC_ISSUER}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE}
+      CORE_URL: ${CORE_URL}
+    command: ["python", "-m", "src", "serve", "--profile", "integrated", "--host", "0.0.0.0", "--port", "8000"]
+    ports: ["127.0.0.1:8000:8000"]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+volumes:
+  postgres_data:

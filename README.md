@@ -1,0 +1,61 @@
+# template_suite_guilarde
+
+Base para aplicações da suíte Guilarde: FastAPI, SQLAlchemy 2, Alembic e frontend HTML/CSS/JS. Inclui integração OIDC/Core, sessões BFF, autorização por tenant e testes de isolamento PostgreSQL. Não contém módulos de negócio.
+
+## Escolha um cenário
+
+| Cenário | Quando usar | Pré-requisitos | Comandos principais | Guia completo |
+|---|---|---|---|---|
+| `dev` | Interface e trabalho local sem serviços externos | Python 3.12+ e dependências instaladas | `python -m src --profile dev --reload` | [Operações — dev](docs/operations.md#dev-isolado) |
+| `integrated` | Integrar com PostgreSQL, Authentik e Core reais | PostgreSQL, OIDC/Core configurados e runtime/migration roles | `python -m src migrate --profile integrated`<br>`python -m src check --profile integrated`<br>`python -m src --profile integrated` | [Operações — integrated](docs/operations.md#integrated) |
+| `production` | Operar release com configurações e segredos de produção | PostgreSQL, Authentik/Core e arquivos runtime/migration separados | `python -m src migrate --profile production --env-file .env.production.migration`<br>`python -m src check --profile production --env-file .env.production`<br>`python -m src --profile production --env-file .env.production` | [Deploy](docs/deploy.md) e [operações](docs/operations.md#production) |
+
+O perfil é sempre informado por `--profile`; `ENVIRONMENT` não seleciona perfil. O comando recusa iniciar sem perfil. Pare o servidor com Ctrl+C. Consulte [diagnóstico](docs/troubleshooting.md) quando um comando falhar.
+
+## Instalar dependências
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.lock
+python -m pip install -e '.[dev]'
+```
+
+No Windows PowerShell, use `py -3.12 -m venv .venv`, ative com `.\.venv\Scripts\Activate.ps1` e instale o extra com `python -m pip install -e ".[dev]"`.
+
+Instale os hooks uma vez por clone com `pre-commit install`; eles rodam ruff, mypy e checagens de arquivo a cada commit. Com `make` disponível, `make help` lista atalhos para os mesmos comandos (`make dev`, `make validate`, `make audit`); no Windows, use os comandos `python` diretamente.
+
+## Criar e integrar uma aplicação
+
+Opcionalmente personalize os metadados do projeto e gere `.env`:
+
+```bash
+python scripts/bootstrap.py --app-id minha-app --name "Minha aplicação" --issuer https://auth.guilarde.com/application/o/minha-app/
+```
+
+O bootstrap recusa sobrescrever `.env`. Ele renomeia o projeto em `README.md`, `pyproject.toml` (versão `0.1.0`), `suite-app.json`, `src/frontend/index.html`, `docs/project-context.md` e no Master ADR, e imprime os próximos passos. Ajuste as configurações OIDC, Core e PostgreSQL e registre `suite-app.json` segundo o [contrato com o Core](docs/core-contract.md).
+
+Para ver o que ainda é do template (nome, `.env`, credenciais OIDC vazias, seções `A definir` do contexto) sem alterar nada:
+
+```bash
+python scripts/bootstrap.py --check
+```
+
+## Documentação
+
+Comece pelo [índice](docs/README.md). Os guias principais são [operações](docs/operations.md), [desenvolvimento](docs/development.md), [deploy](docs/deploy.md), [arquitetura](docs/architecture.md), [segurança](docs/security.md), [testes](docs/testing.md) e [contrato com o Core](docs/core-contract.md).
+
+## Estrutura
+
+| Caminho | Responsabilidade |
+|---|---|
+| `docs/` | Contexto, arquitetura, integração, segurança e operação |
+| `src/backend/api/` | Autenticação, contexto de tenant e rotas da aplicação |
+| `src/backend/core/`, `integrations/`, `tenancy/` | Configuração, integração e isolamento |
+| `src/backend/models/`, `schemas/`, `services/`, `repositories/` | Pontos de extensão do domínio |
+| `src/backend/migrations/` | Migrações, executadas como etapa separada em perfis externos |
+| `src/frontend/` | Login, seleção de tenant e cliente BFF |
+| `tests/` | Contratos, segurança e integração PostgreSQL |
+| `scripts/`, `deploy/` | Bootstrap, validação e provisionamento |
+| `Makefile`, `.pre-commit-config.yaml` | Atalhos dos comandos documentados e hooks locais |
+| `AGENTS.md`, `CLAUDE.md` | Regras para agentes de IA; `CLAUDE.md` só importa `AGENTS.md` |

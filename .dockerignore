@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .dockerignore — Exclusões do build Docker
+#
+# Evita copiar arquivos desnecessários para dentro da imagem Docker,
+# reduzindo o tamanho do contexto de build e da imagem final.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Controle de versão
+.git
+.gitignore
+
+# Ambientes virtuais Python (usados apenas em dev local)
+.venv
+venv
+env
+
+# Variáveis de ambiente (segredos — NÃO devem entrar na imagem)
+.env
+.env.*
+!.env.example
+
+# Caches de Python e ferramentas de qualidade
+__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Cobertura de testes e relatórios
+htmlcov
+.coverage
+.coverage.*
+
+# Artefatos de build do setuptools/pip
+build
+dist
+*.egg-info
+
+# Diretórios que não vão para produção
+tests
+deploy
+
+# Documentação (não necessária na imagem de runtime)
+*.md
+!src/**/*.md
+!README.md
+.github
+docs
+
+# IDE e editor
+.idea
+
+# Local development database and session encryption key
+.local/
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal

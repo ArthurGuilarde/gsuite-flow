@@ -1,0 +1,11 @@
+from fastapi import APIRouter, Depends
+
+from src.backend.api.deps import read_context
+from src.backend.schemas.context import ContextView
+
+api_v1_router = APIRouter(prefix="/api/v1")
+
+
+@api_v1_router.get("/context", response_model=ContextView, tags=["workspace"])
+def current_context(ctx=Depends(read_context)):
+    return ContextView(tenant_id=ctx.tenant_id, permissions=sorted(ctx.permissions), features=sorted(ctx.features))
