@@ -606,3 +606,66 @@ def test_leitor_nao_escreve_mas_le(client, grants):
 def test_escrita_exige_csrf(client):
     r = client.post(P + "/perfis", json={"nome": "x", "custo_hora": 1}, headers={"X-Tenant-ID": str(TENANT_A)})
     assert r.status_code == 403
+
+
+# --- vínculo com despesas (Fase 4) ------------------------------------------------------------------------------------
+
+
+def nova_despesa(c, nome="Licença", tenant=TENANT_A, **extra):
+    corpo = {"nome": nome, "categoria": "SaaS & Ferramentas", "tipo_custo": "RECORRENTE_MENSAL", "valor": 1000}
+    corpo.update(extra)
+    r = c.post("/api/v1/despesas", json=corpo, headers=h(tenant, True))
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def test_iniciativa_sem_despesa_tem_campos_de_vinculo_vazios(client):
+    ini = criar_iniciativa(client, corpo_direto())
+    assert ini["despesa_id"] is None and ini["despesa_nome"] is None and ini["conversao_despesa"] is False
+    assert send(client, "POST", "/iniciativas", corpo_direto(conversao_despesa=True)).status_code == 422
+
+
+def test_iniciativa_manual_com_despesa_id(client):
+    despesa = nova_despesa(client)
+    ini = criar_iniciativa(client, corpo_direto(despesa_id=despesa["id"]))
+    assert ini["despesa_id"] == despesa["id"] and ini["despesa_nome"] == "Licença"
+    assert ini["conversao_despesa"] is False
+    listada = get(client, "/iniciativas?referencia=2026-02").json()[0]
+    assert listada["despesa_nome"] == "Licença"
+    # despesa inexistente ou de outro tenant -> 404 (criação e edição)
+    assert send(client, "POST", "/iniciativas", corpo_direto(despesa_id=str(uuid4()))).status_code == 404
+    assert send(client, "POST", "/iniciativas", corpo_direto(despesa_id=despesa["id"]), TENANT_B).status_code == 404
+    assert send(client, "PUT", f"/iniciativas/{ini['id']}", corpo_direto(despesa_id=str(uuid4()))).status_code == 404
+    # simulação ignora despesa_id
+    assert send(client, "POST", "/simular", corpo_direto(despesa_id=str(uuid4()))).status_code == 200
+    # a iniciativa manual pode ser removida normalmente
+    assert send(client, "DELETE", f"/iniciativas/{ini['id']}").status_code == 204
+
+
+def test_fonte_com_despesa_nao_pode_ser_excluida(client):
+    fonte = nova_fonte(client, "Fabric")
+    despesa = nova_despesa(client, fonte_id=fonte["id"])
+    r = send(client, "DELETE", f"/fontes/{fonte['id']}")
+    assert r.status_code == 409 and "detail" in r.json()
+    client.delete(f"/api/v1/despesas/{despesa['id']}", headers=h(TENANT_A, True))
+    assert send(client, "DELETE", f"/fontes/{fonte['id']}").status_code == 204
+
+
+def test_iniciativa_de_conversao_nao_pode_ser_excluida(client):
+    despesa = nova_despesa(client)
+    r = client.post(f"/api/v1/despesas/{despesa['id']}/cancelar", json={"mes": "2026-02"}, headers=h(TENANT_A, True))
+    assert r.status_code == 200, r.text
+    ini = r.json()["iniciativa"]
+    lida = get(client, f"/iniciativas/{ini['id']}").json()
+    assert lida["conversao_despesa"] is True and lida["despesa_nome"] == "Licença"
+    excluir = send(client, "DELETE", f"/iniciativas/{ini['id']}")
+    assert excluir.status_code == 409 and "detail" in excluir.json()
+    # despesa_id não pode ser trocado nem removido no PUT
+    assert send(client, "PUT", f"/iniciativas/{ini['id']}", corpo_direto(valor=1000)).status_code == 422
+    outra = nova_despesa(client, "Outra")
+    assert send(client, "PUT", f"/iniciativas/{ini['id']}", corpo_direto(despesa_id=outra["id"])).status_code == 422
+    ok = send(client, "PUT", f"/iniciativas/{ini['id']}", corpo_direto(despesa_id=despesa["id"], janela_meses=3))
+    assert ok.status_code == 200 and ok.json()["janela_meses"] == 3 and ok.json()["conversao_despesa"] is True
+    # aparece no dashboard do FinOps como saving
+    dash = get(client, "/dashboard?de=2026-01&ate=2026-06&referencia=2026-03").json()
+    assert dash["kpis"]["saving_direto_em_curso"] == 1000.0

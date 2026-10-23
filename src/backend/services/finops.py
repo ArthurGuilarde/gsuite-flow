@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from src.backend.core.exceptions import ConflictError, NotFoundError
 from src.backend.models.finops import Fatura, FonteCusto, Iniciativa, IniciativaParticipante, PerfilCusto
+from src.backend.repositories import despesas as repo_despesas
 from src.backend.repositories import finops as repo
 from src.backend.schemas.finops import (
     FaturaCreate,
@@ -146,6 +147,8 @@ def remover_fonte(db: Session, ctx: TenantContext, fonte_id: UUID) -> None:
     fonte = _fonte_ou_404(db, ctx, fonte_id)
     if repo.listar_iniciativas_da_fonte(db, ctx.tenant_id, fonte.id):
         raise ConflictError("Fonte de custo vinculada a iniciativas")
+    if repo_despesas.listar_despesas_da_fonte(db, ctx.tenant_id, fonte.id):
+        raise ConflictError("Fonte de custo vinculada a despesas")
     for fatura in repo.listar_faturas(db, ctx.tenant_id, fonte_id=fonte.id):
         db.delete(fatura)
     db.flush()
@@ -275,8 +278,16 @@ def _calculo_view(c: calc.Calculo) -> dict:
     }
 
 
+def calculo_da_iniciativa(ini: Iniciativa, partes: Sequence[IniciativaParticipante], referencia: date) -> calc.Calculo:
+    return calc.calcular_iniciativa(_entrada_orm(ini, partes), referencia)
+
+
 def _iniciativa_view(
-    ini: Iniciativa, partes: Sequence[IniciativaParticipante], fonte_nome: str | None, referencia: date
+    ini: Iniciativa,
+    partes: Sequence[IniciativaParticipante],
+    fonte_nome: str | None,
+    referencia: date,
+    despesa_nome: str | None = None,
 ) -> dict:
     resultado = calc.calcular_iniciativa(_entrada_orm(ini, partes), referencia)
     return {
@@ -292,6 +303,9 @@ def _iniciativa_view(
         "mes_encerramento": ini.mes_encerramento,
         "fonte_id": ini.fonte_id,
         "fonte_nome": fonte_nome,
+        "despesa_id": ini.despesa_id,
+        "despesa_nome": despesa_nome,
+        "conversao_despesa": ini.conversao_despesa,
         "investimento_reais": ini.investimento_reais,
         "investimento_horas": ini.investimento_horas,
         "investimento_custo_hora": ini.investimento_custo_hora,
@@ -314,11 +328,12 @@ def _iniciativa_view(
     }
 
 
-def _view_completa(db: Session, ctx: TenantContext, ini: Iniciativa, referencia: date) -> dict:
+def view_completa(db: Session, ctx: TenantContext, ini: Iniciativa, referencia: date) -> dict:
     db.refresh(ini)
     partes = repo.listar_participantes(db, ctx.tenant_id, [ini.id])
     fonte = repo.obter_fonte(db, ctx.tenant_id, ini.fonte_id) if ini.fonte_id else None
-    return _iniciativa_view(ini, partes, fonte.nome if fonte else None, referencia)
+    despesa = repo_despesas.obter_despesa(db, ctx.tenant_id, ini.despesa_id) if ini.despesa_id else None
+    return _iniciativa_view(ini, partes, fonte.nome if fonte else None, referencia, despesa.nome if despesa else None)
 
 
 def _campos_iniciativa(dados: IniciativaIn) -> dict:
@@ -345,7 +360,17 @@ def listar_iniciativas(
     iniciativas = repo.listar_iniciativas(db, ctx.tenant_id, tipo=tipo)
     partes = _agrupar_participantes(repo.listar_participantes(db, ctx.tenant_id, [i.id for i in iniciativas]))
     nomes = {f.id: f.nome for f in repo.listar_fontes(db, ctx.tenant_id)}
-    views = [_iniciativa_view(i, partes[i.id], nomes.get(i.fonte_id) if i.fonte_id else None, ref) for i in iniciativas]
+    nomes_despesas = {d.id: d.nome for d in repo_despesas.listar_despesas(db, ctx.tenant_id)}
+    views = [
+        _iniciativa_view(
+            i,
+            partes[i.id],
+            nomes.get(i.fonte_id) if i.fonte_id else None,
+            ref,
+            nomes_despesas.get(i.despesa_id) if i.despesa_id else None,
+        )
+        for i in iniciativas
+    ]
     if status is not None:
         views = [v for v in views if v["calculo"]["status"] == status]
     views.sort(key=lambda v: v["titulo"])
@@ -362,24 +387,35 @@ def _agrupar_participantes(partes: Sequence[IniciativaParticipante]) -> dict[UUI
 
 def obter_iniciativa(db: Session, ctx: TenantContext, iniciativa_id: UUID, referencia: date | None) -> dict:
     ini = _iniciativa_ou_404(db, ctx, iniciativa_id)
-    return _view_completa(db, ctx, ini, referencia or mes_atual())
+    return view_completa(db, ctx, ini, referencia or mes_atual())
+
+
+def _despesa_ou_404(db: Session, ctx: TenantContext, despesa_id: UUID) -> None:
+    if repo_despesas.obter_despesa(db, ctx.tenant_id, despesa_id) is None:
+        raise NotFoundError("Despesa não encontrada")
 
 
 def criar_iniciativa(db: Session, ctx: TenantContext, dados: IniciativaIn) -> dict:
     if dados.fonte_id is not None:
         _fonte_ou_404(db, ctx, dados.fonte_id)
+    if dados.despesa_id is not None:
+        _despesa_ou_404(db, ctx, dados.despesa_id)
     ini = Iniciativa(tenant_id=ctx.tenant_id, created_by=ctx.sub, **_campos_iniciativa(dados))
     db.add(ini)
     _persistir(db, "Conflito ao criar iniciativa")
     db.add_all(_novos_participantes(ctx, ini.id, dados))
     _persistir(db, "Conflito ao criar participantes")
-    return _view_completa(db, ctx, ini, mes_atual())
+    return view_completa(db, ctx, ini, mes_atual())
 
 
 def atualizar_iniciativa(db: Session, ctx: TenantContext, iniciativa_id: UUID, dados: IniciativaIn) -> dict:
     ini = _iniciativa_ou_404(db, ctx, iniciativa_id)
     if dados.fonte_id is not None:
         _fonte_ou_404(db, ctx, dados.fonte_id)
+    if ini.conversao_despesa and dados.despesa_id != ini.despesa_id:
+        raise HTTPException(422, "despesa_id de uma iniciativa de conversão não pode mudar")
+    if dados.despesa_id is not None:
+        _despesa_ou_404(db, ctx, dados.despesa_id)
     for campo, valor in _campos_iniciativa(dados).items():
         setattr(ini, campo, valor)
     for antigo in repo.listar_participantes(db, ctx.tenant_id, [ini.id]):
@@ -387,11 +423,13 @@ def atualizar_iniciativa(db: Session, ctx: TenantContext, iniciativa_id: UUID, d
     db.flush()
     db.add_all(_novos_participantes(ctx, ini.id, dados))
     _persistir(db, "Conflito ao atualizar iniciativa")
-    return _view_completa(db, ctx, ini, mes_atual())
+    return view_completa(db, ctx, ini, mes_atual())
 
 
 def remover_iniciativa(db: Session, ctx: TenantContext, iniciativa_id: UUID) -> None:
     ini = _iniciativa_ou_404(db, ctx, iniciativa_id)
+    if ini.conversao_despesa:
+        raise ConflictError("Iniciativa criada por cancelamento/renegociação: reverta pela despesa")
     for p in repo.listar_participantes(db, ctx.tenant_id, [ini.id]):
         db.delete(p)
     db.flush()

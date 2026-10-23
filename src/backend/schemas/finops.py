@@ -171,6 +171,7 @@ class IniciativaIn(_Entrada):
     janela_meses: int = Field(default=JANELA_PADRAO, ge=1, le=60)
     mes_encerramento: Competencia | None = None
     fonte_id: UUID | None = None
+    despesa_id: UUID | None = None
     investimento_reais: Dinheiro = Decimal(0)
     investimento_horas: Horas = Decimal(0)
     investimento_custo_hora: CustoHora = Decimal(0)
@@ -242,6 +243,9 @@ class IniciativaView(BaseModel):
     mes_encerramento: Competencia | None
     fonte_id: UUID | None
     fonte_nome: str | None
+    despesa_id: UUID | None
+    despesa_nome: str | None
+    conversao_despesa: bool
     investimento_reais: Numero
     investimento_horas: Numero
     investimento_custo_hora: Numero

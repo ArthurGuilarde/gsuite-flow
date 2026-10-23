@@ -98,8 +98,14 @@ class Iniciativa(TenantRecord):
             ["fontes_custo.tenant_id", "fontes_custo.id"],
             name="fk_iniciativas_fonte",
         ),
+        ForeignKeyConstraint(
+            ["tenant_id", "despesa_id"],
+            ["despesas.tenant_id", "despesas.id"],
+            name="fk_iniciativas_despesa",
+        ),
         UniqueConstraint("tenant_id", "id", name="uq_iniciativas_tenant_id"),
         Index("ix_iniciativas_tenant_inicio", "tenant_id", "mes_inicio"),
+        Index("ix_iniciativas_tenant_despesa", "tenant_id", "despesa_id"),
     )
     titulo: Mapped[str] = mapped_column(String(160), nullable=False)
     descricao: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -111,6 +117,10 @@ class Iniciativa(TenantRecord):
     janela_meses: Mapped[int] = mapped_column(Integer, nullable=False, default=6, server_default="6")
     mes_encerramento: Mapped[date | None] = mapped_column(Date, nullable=True)
     fonte_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    despesa_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    conversao_despesa: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     investimento_reais: Mapped[Decimal] = mapped_column(
         Numeric(14, 2), nullable=False, default=Decimal(0), server_default="0"
     )
