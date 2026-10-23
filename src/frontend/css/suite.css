@@ -130,3 +130,52 @@ td.acoes{display:table-cell}
   .so-impressao{display:block;margin-bottom:12px;color:var(--muted)}
   *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
 }
+
+/* Rotinas */
+.resumo-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px}
+.resumo-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.resumo-run{border-left-color:#4f46e5}
+.resumo-total{border-left-color:var(--primary)}
+.resumo-topo,.resumo-linha{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.9rem}
+.resumo-horas{font-size:.9rem;color:var(--muted)}
+.resumo-horas strong{color:var(--primary)}
+.progresso{height:8px;border-radius:4px;background:#e6edf0;overflow:hidden}
+.progresso-preenchido{height:100%;background:var(--green)}
+.cartao h3{font-size:.95rem;color:var(--primary);margin:0 0 8px}
+.lista-limpa{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.pendencias{border-left:4px solid var(--amber)}
+.pendencias-ok{border-left-color:var(--green)}
+.pendencia-item{display:grid;grid-template-columns:90px minmax(70px,120px) 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.pendencia-item:last-child{border-bottom:0}
+.pendencia-item.atrasada .pendencia-data{color:var(--danger);font-weight:700}
+.pendencia-data{font-variant-numeric:tabular-nums}
+.dia-grupo{margin-top:16px}
+.dia-titulo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-bottom:6px;border-bottom:2px solid var(--border)}
+.dia-contagem{margin-left:auto;font-weight:400}
+.ocorrencia{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)}
+.ocorrencia:last-child{border-bottom:0}
+.ocorrencia-titulo{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ocorrencia-meta{font-size:.85rem;margin-top:2px}
+.ocorrencia-obs{font-size:.85rem;margin-top:2px;white-space:pre-wrap}
+.ocorrencia.concluida .rotina-titulo{text-decoration:line-through;color:var(--muted)}
+.rotina-titulo{font-weight:600}
+a.rotina-titulo{color:var(--accent-dark)}
+tr.inativa td{opacity:.6}
+.badge-agenda{background:#e0f2fe;color:#075985}
+.agenda-diaria{background:#fef3c7;color:var(--amber-dark)}
+.agenda-quinzenal{background:#fae8ff;color:#86198f}
+.agenda-mensal_dia_fixo,.agenda-mensal_primeiro_util,.agenda-mensal_ultimo_util{background:#ede9fe;color:#5b21b6}
+.situacao-hoje{background:var(--amber);color:#3b2a00}
+.situacao-atrasada{background:var(--danger);color:#fff}
+.situacao-prevista{background:#e6edf0;color:var(--primary)}
+.situacao-sem-data{background:#f1f5f9;color:var(--muted)}
+.situacao-concluida{background:#d1fae5;color:var(--green-dark)}
+.cartao-pendencias.com-pendencia{border-left:4px solid var(--amber)}
+.formulario-modal{display:flex;flex-direction:column;gap:12px}
+.modal textarea{width:100%}
+.modal input[type=number]{width:100%}
+@media(max-width:800px){
+  .pendencia-item{grid-template-columns:1fr auto}
+  .pendencia-titulo{grid-column:1/-1}
+  .ocorrencia{flex-direction:column}
+}

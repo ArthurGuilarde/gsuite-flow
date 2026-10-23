@@ -1,5 +1,5 @@
 import {get} from '../api.js';
-import {h, campo, estadoVazio, numero, pct, pctFracao, pp, salvarArquivo, tratarErro} from '../ui.js';
+import {h, campo, estadoVazio, hojeLocal, minutos, numero, pct, pctFracao, pp, salvarArquivo, tratarErro} from '../ui.js';
 
 const TODAS = '';
 
@@ -54,7 +54,43 @@ function barras(grupos, filtro) {
     });
 }
 
-function montarDashboard(d) {
+function barrasRotinas(rotinas, filtro) {
+    return rotinas.filter(r => filtro === 'TODOS' || (filtro === 'ABERTO' ? r.abertos > 0 : r.resolvidos > 0)).map(r => {
+        const pctAberto = r.total ? (r.abertos / r.total) * 100 : 0;
+        const pctResolvido = r.total ? (r.resolvidos / r.total) * 100 : 0;
+        const segAberto = h('div', {class: 'seg seg-aberto', title: `${r.abertos} abertos`});
+        const segResolvido = h('div', {class: 'seg seg-resolvido', title: `${r.resolvidos} resolvidos`});
+        segAberto.style.width = `${pctAberto}%`;
+        segResolvido.style.width = `${pctResolvido}%`;
+        return h('div', {class: 'barra-grupo barra-rotina'},
+            h('div', {class: 'barra-topo'},
+                h('span', {class: 'barra-nome', text: '🔁 Rotinas'}),
+                h('span', {class: `badge badge-${r.categoria.toLowerCase()}`, text: r.categoria}),
+                h('span', {class: 'texto-suave', text: `${numero(r.total)} ocorrências`})),
+            h('div', {class: 'barra-empilhada'}, segAberto, segResolvido),
+            h('div', {class: 'barra-legenda'},
+                h('span', {class: 'leg-aberto', text: `${numero(r.abertos)} abertos (${pct(pctAberto)})`}),
+                h('span', {class: 'leg-resolvido', text: `${numero(r.resolvidos)} resolvidos (${pct(pctResolvido)})`}),
+                h('span', {class: 'texto-suave', text: `Previsto ${minutos(r.minutos_previstos)} × executado ${minutos(r.minutos_executados)}`})));
+    });
+}
+
+function cartaoPendencias(p) {
+    const hoje = p.vence_hoje.length, atrasadas = p.atrasadas.length;
+    return h('section', {class: `cartao cartao-pendencias${hoje + atrasadas ? ' com-pendencia' : ''}`},
+        h('div', {class: 'cartao-topo'},
+            h('h2', {text: 'Rotinas: não deixe nada para trás'}),
+            h('a', {class: 'botao secundario pequeno', href: '#/rotinas', text: 'Abrir rotinas'})),
+        h('p', {},
+            h('span', {class: 'badge situacao situacao-hoje', text: `${numero(hoje)} vencem hoje`}), ' ',
+            h('span', {class: 'badge situacao situacao-atrasada', text: `${numero(atrasadas)} atrasadas`}),
+            hoje + atrasadas === 0 ? h('span', {class: 'texto-suave', text: ' Tudo em dia.'}) : null));
+}
+
+function montarDashboard(d, pendencias) {
+    const rotinas = d.rotinas ?? [];
+    const previstos = rotinas.reduce((t, r) => t + r.minutos_previstos, 0);
+    const executados = rotinas.reduce((t, r) => t + r.minutos_executados, 0);
     const metaB = d.meta_build_min, metaR = d.meta_run_max;
     const resolvidos = cartao('Resolvidos no ciclo',
         linhaCategoria('BUILD', d.resolvidos_build, d.perc_build_resolvidos, statusBuild(d.perc_build_resolvidos, metaB)),
@@ -73,17 +109,19 @@ function montarDashboard(d) {
                 c.classList.toggle('ativo', ativo);
                 c.setAttribute('aria-pressed', String(ativo));
             }
-            lista.replaceChildren(...barras(d.groups, valor));
+            lista.replaceChildren(...barras(d.groups, valor), ...barrasRotinas(rotinas, valor));
         }}
     }, {TODOS: 'Todos', ABERTO: 'Abertos', RESOLVIDO: 'Resolvidos'}[valor]));
-    lista.replaceChildren(...barras(d.groups, 'TODOS'));
+    lista.replaceChildren(...barras(d.groups, 'TODOS'), ...barrasRotinas(rotinas, 'TODOS'));
 
     return h('div', {},
         h('div', {class: 'kpis'},
             kpi('Total de itens', numero(d.total)),
             kpi('Abertos (backlog)', numero(d.total_abertos), 'kpi-aberto'),
             kpi('Resolvidos', numero(d.total_resolvidos), 'kpi-resolvido'),
-            kpi('Taxa de resolução', pct(d.taxa_resolucao))),
+            kpi('Taxa de resolução', pct(d.taxa_resolucao)),
+            kpi('Horas de rotina (exec. × prev.)', `${minutos(executados)} × ${minutos(previstos)}`)),
+        pendencias ? cartaoPendencias(pendencias) : null,
         h('div', {class: 'grade-2'}, resolvidos, backlog),
         h('section', {class: 'cartao'},
             h('div', {class: 'cartao-topo'}, h('h2', {text: 'Itens por grupo'}), h('div', {class: 'chips', role: 'group', 'aria-label': 'Filtrar por status'}, chips)),
@@ -105,6 +143,7 @@ export const painel = {
             return;
         }
         let dados = null;
+        const hoje = hojeLocal();
         const rotuloImpressao = h('p', {class: 'so-impressao'});
         const area = h('div', {});
         const seletor = h('select', {id: 'painel-semana'},
@@ -115,14 +154,16 @@ export const painel = {
         async function carregar() {
             area.replaceChildren(h('p', {class: 'texto-suave', text: 'Carregando…'}));
             try {
-                const resultado = await get('/api/v1/dashboard', {semana_id: seletor.value}, signal);
+                const [resultado, pendencias] = await Promise.all([
+                    get('/api/v1/dashboard', {semana_id: seletor.value}, signal),
+                    get('/api/v1/rotinas/pendencias', {hoje}, signal).catch(() => null)]);
                 if (signal.aborted) return;
                 dados = resultado;
                 rotuloImpressao.textContent = `Período: ${dados.periodo}`;
                 area.replaceChildren(dados.total === 0
                     ? estadoVazio('Sem lançamentos neste período', 'Inicialize a semana em Lançamentos para começar a registrar.',
                         h('a', {class: 'botao', href: '#/lancamentos', text: 'Ir para Lançamentos'}))
-                    : montarDashboard(dados));
+                    : montarDashboard(dados, pendencias));
             } catch (erro) {
                 if (signal.aborted) return;
                 dados = null;

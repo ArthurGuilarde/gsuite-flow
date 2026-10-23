@@ -5,6 +5,8 @@ import {painel} from './pages/painel.js';
 import {lancamentos} from './pages/lancamentos.js';
 import {grupos} from './pages/grupos.js';
 import {semanas} from './pages/semanas.js';
+import {rotinas} from './pages/rotinas.js';
+import {rotinasCatalogo} from './pages/rotinas-catalogo.js';
 
 const el = id => document.getElementById(id);
 const status = message => { el('status').textContent = message; };
@@ -13,9 +15,11 @@ let routerIniciado = false;
 
 registrarRotas({
     '/': painel,
+    '/rotinas': rotinas,
     '/lancamentos': lancamentos,
     '/config/grupos': grupos,
-    '/config/semanas': semanas
+    '/config/semanas': semanas,
+    '/config/rotinas': rotinasCatalogo
 });
 
 async function selectTenant(tenantId) {

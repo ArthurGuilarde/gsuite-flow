@@ -58,6 +58,18 @@ export function data(iso) {
     const [a, m, d] = String(iso).slice(0, 10).split('-');
     return a && m && d ? `${d}/${m}/${a}` : '—';
 }
+// Data local do navegador em YYYY-MM-DD (nunca toISOString, que converte para UTC).
+export function hojeLocal() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// Minutos como "1 h 30 min", "2 h" ou "45 min".
+export function minutos(total) {
+    const m = Math.max(0, Math.round(total ?? 0));
+    const horas = Math.floor(m / 60), resto = m % 60;
+    if (!horas) return `${resto} min`;
+    return resto ? `${horas} h ${resto} min` : `${horas} h`;
+}
 export function periodo(semana) {
     if (!semana.data_inicio && !semana.data_fim) return 'Sem período definido';
     return `${data(semana.data_inicio)} a ${data(semana.data_fim)}`;
