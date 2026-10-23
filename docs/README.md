@@ -17,6 +17,7 @@ Leia apenas o que a tarefa exige. Evite duplicar regras: cada documento abaixo �
 | [ADR-004 — rotinas: esforço e pendências](adrs/ADR-004-rotinas-esforco-e-pendencias.md) | Para entender esforço estimado/real, pendências e o painel de Rotinas |
 | [ADR-005 — FinOps: valor das decisões](adrs/ADR-005-finops-valor-das-decisoes.md) | Para entender iniciativas, janela de saving, perfis de custo/hora e ROI do módulo FinOps |
 | [ADR-006 — Despesas & Contratos](adrs/ADR-006-despesas-contratos-e-conversao.md) | Para entender inventário de despesas, orçamento mensal e conversão de cancelamento/renegociação em iniciativa FinOps |
+| [ADR-007 — Planner pessoal](adrs/ADR-007-planner-pessoal-meu-dia.md) | Para entender o Meu Dia por pessoa, RLS por sujeito, pendências que migram e o escopo integrado |
 | [Master ADR](adrs/MASTER-ADR.md) | Antes de alterar decisões arquiteturais |
 | [Convenção de ADRs](adrs/README.md) | Para registrar decisões |
 | [Template de ADR](adrs/TEMPLATE-ADR.md) | Ao criar um ADR |

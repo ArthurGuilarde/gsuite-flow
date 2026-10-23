@@ -25,7 +25,7 @@ O MVP de referência é uma aplicação Flask com SPA em Vanilla JS que acompanh
 6. **RLS no PostgreSQL.** `grupos`, `semanas` e `lancamentos` usam ENABLE/FORCE RLS com USING e WITH CHECK e concessões à role de runtime.
 7. **Frontend em ES modules com CSP estrita.** `script-src 'self'`, sem handlers inline, sem CDN e sem `innerHTML` com dados.
 8. **Remoções do MVP.** Alias `/api` legado, `audit_log`, `/metrics/latest`, `/raw`, exportação HTML standalone e "copiar contexto LLM" (que volta com Rotinas, a partir da Fase 2).
-9. **Planner pessoal** pertence a (tenant, sub) e terá ADR próprio na fase dele; não é decidido aqui.
+9. **Planner pessoal** pertence a (tenant, sub) e terá ADR próprio na fase dele; não é decidido aqui. O registro dessa decisão é o [ADR-007](ADR-007-planner-pessoal-meu-dia.md).
 
 ## Alternativas Consideradas
 

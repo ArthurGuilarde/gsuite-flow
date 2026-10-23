@@ -23,7 +23,7 @@ Veja o [guia de desenvolvimento](development.md) para os caminhos e a referênci
 
 Decisão em [ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md); regras em [project-context.md](project-context.md). Camadas: `api/v1/capacidade.py` → `services/capacidade.py` → `repositories/capacidade.py` → `models/capacidade.py`, com schemas Pydantic de entrada que proíbem campos extras e nunca aceitam `tenant_id`. O dashboard agrega em Python sobre linhas lidas via ORM, porque a guarda SQLite recusa SQL textual.
 
-Tabelas (migração `0002_capacidade`): `grupos`, `semanas` e `lancamentos`, todas com `id` UUID, `tenant_id` e `created_by`. `lancamentos` referencia grupo e semana por chaves estrangeiras compostas `(tenant_id, id)` com `ON DELETE CASCADE`. No PostgreSQL as três têm ENABLE/FORCE RLS com USING e WITH CHECK; no SQLite valem apenas os guardrails do ORM. Fases seguintes (rotinas, Planner pessoal, FinOps, Despesas & Contratos) entram como domínios próprios, cada uma com seus ADRs quando houver decisão arquitetural.
+Tabelas (migração `0002_capacidade`): `grupos`, `semanas` e `lancamentos`, todas com `id` UUID, `tenant_id` e `created_by`. `lancamentos` referencia grupo e semana por chaves estrangeiras compostas `(tenant_id, id)` com `ON DELETE CASCADE`. No PostgreSQL as três têm ENABLE/FORCE RLS com USING e WITH CHECK; no SQLite valem apenas os guardrails do ORM. Fases seguintes (rotinas, FinOps, Despesas & Contratos, Planner pessoal) entram como domínios próprios, cada uma com seus ADRs quando houver decisão arquitetural.
 
 ## Domínio Rotinas (Fase 2)
 
@@ -42,6 +42,12 @@ Tabelas (migração `0004_finops`): `perfis_custo`, `fontes_custo`, `faturas`, `
 Decisão em [ADR-006](adrs/ADR-006-despesas-contratos-e-conversao.md). Mesmas camadas dos domínios anteriores. O cálculo (custo contratual e considerado, pontuais, alertas de renovação, % de auditoria e orçamento anual ÷ 12) fica em `services/despesas_calculos.py`, módulo puro sem I/O; as ações cancelar, renegociar e reverter rodam numa única transação do serviço e criam ou apagam a iniciativa de conversão no FinOps.
 
 Tabelas (migração `0005_despesas`): `despesas` e `orcamentos_despesas`, com `id` UUID, `tenant_id` e `created_by`, e as colunas `despesa_id` e `conversao_despesa` em `iniciativas`. `despesas` referencia a fonte de custo e `iniciativas` referencia a despesa por chaves estrangeiras compostas `(tenant_id, id)` sem cascata (o serviço responde 409 ao excluir despesa com iniciativas e fonte com despesas); `orcamentos_despesas` é único por (tenant, competência). No PostgreSQL as duas tabelas novas têm ENABLE/FORCE RLS com USING e WITH CHECK.
+
+## Domínio Planner pessoal (Fase 5)
+
+Decisão em [ADR-007](adrs/ADR-007-planner-pessoal-meu-dia.md). Mesmas camadas dos domínios anteriores, com uma diferença: os dados pertencem a (tenant, sub). O `sub` vem de `ctx.sub` (nunca do corpo) e toda consulta filtra por tenant e sub. A visão "Meu Dia" reutiliza as pendências de Rotinas e o alerta URGENTE de renovação de Despesas, em somente leitura.
+
+Tabelas (migração `0006_planner`): `planner_dias` (única por tenant, sub e data, com `versao` otimista) e `planner_itens`, com `id` UUID, `tenant_id` e `sub`. `planner_itens` referencia o dia por chave estrangeira composta `(tenant_id, dia_id)` com `ON DELETE CASCADE`. No PostgreSQL ambas têm ENABLE/FORCE RLS com a policy `planner_owner`, cujo USING e WITH CHECK exigem `tenant_id` igual a `app.tenant_id` e `sub` igual a `app.subject`; no SQLite valem apenas os guardrails do ORM.
 
 ## Desenvolvimento isolado
 

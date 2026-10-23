@@ -11,13 +11,14 @@ Acompanhar indicadores de engenharia: capacidade **BUILD ≥ 70% / RUN ≤ 30%**
 
 ## Escopo
 
-O porte é feito em fases ([ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md)); as Fases 2, 3 e 4 estão registradas no [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md), no [ADR-005](adrs/ADR-005-finops-valor-das-decisoes.md) e no [ADR-006](adrs/ADR-006-despesas-contratos-e-conversao.md).
+O porte é feito em fases ([ADR-003](adrs/ADR-003-porte-mvp-indicadores-em-fases.md)); as Fases 2, 3, 4 e 5 estão registradas no [ADR-004](adrs/ADR-004-rotinas-esforco-e-pendencias.md), no [ADR-005](adrs/ADR-005-finops-valor-das-decisoes.md), no [ADR-006](adrs/ADR-006-despesas-contratos-e-conversao.md) e no [ADR-007](adrs/ADR-007-planner-pessoal-meu-dia.md).
 
 - **Fase 1 (Capacidade):** grupos (squads), semanas/ciclos, lançamentos ABERTO/RESOLVIDO e dashboard BUILD × RUN.
 - **Fase 2 (Rotinas, em andamento):** catálogo de rotinas recorrentes, execução por semana/ocorrência, esforço estimado e real, pendências (vence hoje e atrasadas) e soma no painel BUILD × RUN pela categoria da rotina. Fora da fase: grade de agenda do MVP (A definir).
 - **Fase 3 (FinOps, em andamento):** iniciativas (melhoria, automação e otimização de custo) como fonte única de saving, janela de 6 meses até virar novo normal, perfis de custo/hora, investimento/ROI/payback, e fontes de custo com faturas (orçado × realizado) apenas para acompanhamento.
 - **Fase 4 (Despesas & Contratos, em andamento):** inventário de despesas com status de auditoria, cancelar/renegociar como iniciativas vinculadas do FinOps (reversíveis), orçamento mensal opcional, ligação opcional com fonte de custo, alertas de renovação em 30/60 dias e painel de run-rate, desperdício e saving capturado.
-- **Próximas fases:** Planner pessoal. A definir: ordem e regras detalhadas da fase 5.
+- **Fase 5 (Planner pessoal "Meu Dia", em andamento):** planner por pessoa dentro do tenant, com foco do dia, até 3 prioridades, tarefas e notas, mais as rotinas que vencem hoje ou estão atrasadas e os contratos que renovam em até 30 dias; um registro por dia, com pendências de dias anteriores que podem ser trazidas ou descartadas. Fora do MVP: hidratação, grade de horários, relógio e estado JSON livre no navegador.
+- **Próximas fases:** Não há fases definidas além da Fase 5.
 - **Removido do MVP:** alias `/api` legado, `audit_log`, `/metrics/latest`, `/raw`, exportação HTML standalone e "copiar contexto LLM" (volta com Rotinas). Removidos também, no porte de Rotinas: grade de agenda e `bloco`, `data_especifica`, status no catálogo e o campo `recorrencia`. Removidos também, no porte de FinOps: tabela de meses cadastráveis (a competência é derivada de datas), histórico de saves como fonte de saving, busca "fabric" por nome, sincronização automática fatura→saving e Chart.js por CDN.
 
 ## Tenant e acesso
@@ -78,6 +79,14 @@ Termos da Fase 4 (Despesas & Contratos):
 - **Alertas de renovação:** despesas não canceladas com renovação de hoje até 60 dias: URGENTE até 30 dias, ATENCAO acima.
 - **Painel de despesas:** run-rate mensal e anual, pontuais do ano, desperdício mensal, saving capturado e novo normal (iniciativas vinculadas), orçado × realizado, % de auditoria (despesas fora de EM_REVISAO ÷ total), alertas, série mensal, por categoria e por status.
 
+Termos da Fase 5 (Planner pessoal):
+
+- **Dia:** registro único por (tenant, pessoa, data), criado sob demanda na primeira escrita, com foco (até 500 caracteres), notas (até 20 000) e versão otimista.
+- **Item:** PRIORIDADE (no máximo 3 por dia) ou TAREFA, com texto de 1 a 500 caracteres, indicador de concluído (com data/hora da conclusão) e ordem; no máximo 200 por dia.
+- **Pendente de dia anterior:** item de dia anterior da mesma pessoa, não concluído, não descartado e ainda não migrado. Trazer cria cópia no dia de destino e marca o original como migrado; descartar o marca como descartado.
+- **Meu Dia integrado:** além do dia, mostra rotinas que vencem hoje e atrasadas (concluídas pela API de Rotinas) e contratos não cancelados com renovação em até 30 dias (alerta URGENTE de Despesas).
+- **Privacidade:** os dados são da pessoa (`sub` do contexto), nunca do corpo da requisição. Escrever exige write.
+
 ## Jornadas e critérios de aceite
 
 Fase 1:
@@ -112,12 +121,18 @@ Fase 4 (Despesas & Contratos):
 4. **Não perder renovações:** o painel destaca renovações em até 60 dias. Aceite: URGENTE até 30 dias; canceladas não aparecem.
 5. **Isolamento:** despesas e orçamentos de outro tenant nunca são visíveis nem referenciáveis (validado por testes de RLS e FK composta em PostgreSQL).
 
-A definir: critérios de aceite da fase 5.
+Fase 5 (Planner pessoal):
+
+1. **Planejar o dia:** com write, a pessoa define foco e notas, adiciona prioridades (até 3) e tarefas e as conclui. Aceite: a 4ª prioridade e o 201º item no dia são recusados; texto vazio ou acima de 500 caracteres é recusado; data inválida é recusada.
+2. **Não perder pendências:** itens não concluídos de dias anteriores aparecem como pendentes e podem ser trazidos para o dia ou descartados. Aceite: item que não é pendente anterior resulta em conflito; com 3 prioridades no destino, a cópia entra como tarefa.
+3. **Edição segura:** foco e notas usam versão otimista. Aceite: versão divergente resulta em conflito com a versão atual.
+4. **Ver o que o sistema já sabe:** o dia mostra rotinas que vencem hoje e atrasadas e contratos renovando em até 30 dias. Aceite: segue as regras de Rotinas e de Despesas.
+5. **Privacidade:** uma pessoa nunca vê nem altera o planner de outra, mesmo no mesmo tenant. Aceite: registro de outra pessoa resulta em não encontrado; validado por testes de RLS por sujeito, tenant divergente e FK composta em PostgreSQL.
 
 ## Restrições e integrações
 
-Base técnica: FastAPI, SQLAlchemy 2, Alembic e frontend vanilla (ES modules, CSP estrita); SQLite para dev isolado e PostgreSQL para integrated/produção. Não há importação de dados do MVP: cada tenant começa vazio. O Planner pessoal pertence a (tenant, sub) e terá ADR próprio na fase dele. A definir: integrações de domínio das fases futuras. Nunca inclua credenciais ou dados pessoais reais neste documento.
+Base técnica: FastAPI, SQLAlchemy 2, Alembic e frontend vanilla (ES modules, CSP estrita); SQLite para dev isolado e PostgreSQL para integrated/produção. Não há importação de dados do MVP: cada tenant começa vazio. O Planner pessoal pertence a (tenant, sub) ([ADR-007](adrs/ADR-007-planner-pessoal-meu-dia.md)). A definir: integrações de domínio das fases futuras. Nunca inclua credenciais ou dados pessoais reais neste documento.
 
 ## Pendências
 
-Permanecem "A definir": perfis de usuário, regras de ingresso específicas, metas configuráveis por tenant, metas de esforço de rotinas, grade de agenda, feriados (os dias úteis os ignoram), fuso horário por tenant (hoje é o relógio do servidor), moeda além de BRL, fechamento contábil, fluxo de aprovação de iniciativas e de despesas, despesas recorrentes anuais, multi-moeda, cancelamento de despesa pontual com saving e regras detalhadas da fase 5. Registre dúvidas bloqueantes na tarefa; decisões arquiteturais ficam no Master ADR.
+Permanecem "A definir": perfis de usuário, regras de ingresso específicas, metas configuráveis por tenant, metas de esforço de rotinas, grade de agenda, feriados (os dias úteis os ignoram), fuso horário por tenant (hoje é o relógio do servidor), moeda além de BRL, fechamento contábil, fluxo de aprovação de iniciativas e de despesas, despesas recorrentes anuais, multi-moeda, cancelamento de despesa pontual com saving, se o leitor (somente read) pode gravar o próprio planner pessoal, retenção do histórico do Planner e compartilhamento de planner entre pessoas. Registre dúvidas bloqueantes na tarefa; decisões arquiteturais ficam no Master ADR.

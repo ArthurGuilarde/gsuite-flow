@@ -722,6 +722,158 @@ def test_despesas_with_iniciativa_or_fonte_link_are_protected(db_factory):
         assert db.execute(text("DELETE FROM fontes_custo WHERE id=:id"), {"id": fonte}).rowcount == 1
 
 
+PLANNER_TABLES = ("planner_dias", "planner_itens")
+
+
+def pessoa(db, tenant, sub):
+    context(db, tenant)
+    db.execute(text("SELECT set_config('app.subject', :sub, true)"), {"sub": sub})
+
+
+def add_dia(db, tenant, sub, data="2026-10-23"):
+    dia_id = uuid4()
+    db.execute(
+        text("INSERT INTO planner_dias(id,tenant_id,created_by,sub,data) VALUES (:id,:tenant,:sub,:sub,:data)"),
+        {"id": dia_id, "tenant": tenant, "sub": sub, "data": data},
+    )
+    return dia_id
+
+
+def add_item_planner(db, tenant, sub, dia_id, texto="Tarefa", tipo="TAREFA"):
+    item_id = uuid4()
+    db.execute(
+        text(
+            "INSERT INTO planner_itens(id,tenant_id,created_by,sub,dia_id,tipo,texto) "
+            "VALUES (:id,:tenant,:sub,:sub,:dia,:tipo,:texto)"
+        ),
+        {"id": item_id, "tenant": tenant, "sub": sub, "dia": dia_id, "tipo": tipo, "texto": texto},
+    )
+    return item_id
+
+
+def seed_planner(db, tenant, sub):
+    pessoa(db, tenant, sub)
+    dia = add_dia(db, tenant, sub)
+    add_item_planner(db, tenant, sub, dia)
+    return dia
+
+
+def test_planner_tables_force_rls_and_not_owned_by_runtime(db_factory):
+    with db_factory.begin() as db:
+        for table in PLANNER_TABLES:
+            flags = db.execute(
+                text("SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname=:t"), {"t": table}
+            ).one()
+            assert tuple(flags) == (True, True), table
+            owned = db.execute(
+                text("SELECT tableowner=current_user FROM pg_tables WHERE tablename=:t"), {"t": table}
+            ).scalar()
+            assert owned is False, table
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        db.execute(text("ALTER TABLE planner_dias DISABLE ROW LEVEL SECURITY"))
+
+
+def test_planner_same_tenant_other_subject_sees_and_changes_nothing(db_factory):
+    tenant = uuid4()
+    with db_factory.begin() as db:
+        seed_planner(db, tenant, "pessoa-a")
+    with db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-b")
+        for table in PLANNER_TABLES:
+            assert db.execute(text(f"SELECT count(*) FROM {table}")).scalar() == 0, table  # noqa: S608
+        assert db.execute(text("UPDATE planner_dias SET foco='roubado'")).rowcount == 0
+        assert db.execute(text("DELETE FROM planner_itens")).rowcount == 0
+        assert db.execute(text("DELETE FROM planner_dias")).rowcount == 0
+    with db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-a")
+        for table in PLANNER_TABLES:
+            assert db.execute(text(f"SELECT count(*) FROM {table}")).scalar() == 1, table  # noqa: S608
+
+
+def test_planner_without_subject_sees_nothing(db_factory):
+    tenant = uuid4()
+    with db_factory.begin() as db:
+        seed_planner(db, tenant, "pessoa-a")
+    with db_factory.begin() as db:
+        context(db, tenant)
+        for table in PLANNER_TABLES:
+            assert db.execute(text(f"SELECT count(*) FROM {table}")).scalar() == 0, table  # noqa: S608
+
+
+def test_planner_insert_for_other_subject_denied(db_factory):
+    tenant = uuid4()
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-b")
+        add_dia(db, tenant, "pessoa-a")
+    with db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-a")
+        dia_a = add_dia(db, tenant, "pessoa-a")
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-a")
+        add_item_planner(db, tenant, "pessoa-b", dia_a)  # RLS nega; item.sub == dia.sub é garantido pelo serviço
+
+
+def test_planner_insert_with_other_tenant_denied(db_factory):
+    tenant, other = uuid4(), uuid4()
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-a")
+        add_dia(db, other, "pessoa-a")
+    with db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-a")
+        dia = add_dia(db, tenant, "pessoa-a")
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-a")
+        add_item_planner(db, other, "pessoa-a", dia)
+    with db_factory.begin() as db:
+        pessoa(db, other, "pessoa-a")
+        for table in PLANNER_TABLES:
+            assert db.execute(text(f"SELECT count(*) FROM {table}")).scalar() == 0, table  # noqa: S608
+
+
+def test_planner_composite_fk_blocks_cross_tenant_item(db_factory):
+    a, b = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        dia_a = seed_planner(db, a, "pessoa-a")
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        pessoa(db, b, "pessoa-a")
+        add_item_planner(db, b, "pessoa-a", dia_a, "Aponta para dia de outro tenant")
+    with db_factory.begin() as db:
+        pessoa(db, b, "pessoa-a")
+        dia_b = add_dia(db, b, "pessoa-a")
+        add_item_planner(db, b, "pessoa-a", dia_b)
+
+
+def test_planner_dia_is_unique_per_tenant_sub_data(db_factory):
+    tenant, other = uuid4(), uuid4()
+    with db_factory.begin() as db:
+        seed_planner(db, tenant, "pessoa-a")
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-a")
+        add_dia(db, tenant, "pessoa-a", "2026-10-23")
+    with db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-a")
+        add_dia(db, tenant, "pessoa-a", "2026-10-24")  # outra data
+    with db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-b")
+        add_dia(db, tenant, "pessoa-b", "2026-10-23")  # mesma data, outra pessoa
+    with db_factory.begin() as db:
+        pessoa(db, other, "pessoa-a")
+        add_dia(db, other, "pessoa-a", "2026-10-23")  # mesma pessoa e data, outro tenant
+
+
+def test_planner_dia_delete_cascades_to_itens_and_tipo_is_checked(db_factory):
+    tenant = uuid4()
+    with db_factory.begin() as db:
+        dia = seed_planner(db, tenant, "pessoa-a")
+    with pytest.raises(DBAPIError), db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-a")
+        add_item_planner(db, tenant, "pessoa-a", dia, tipo="OUTRO")
+    with db_factory.begin() as db:
+        pessoa(db, tenant, "pessoa-a")
+        assert db.execute(text("DELETE FROM planner_dias WHERE id=:id"), {"id": dia}).rowcount == 1
+        assert db.execute(text("SELECT count(*) FROM planner_itens")).scalar() == 0
+
+
 def test_capacidade_api_authorized_flow(db_factory, monkeypatch):
     from fastapi.testclient import TestClient
 

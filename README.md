@@ -2,7 +2,7 @@
 
 Indicadores de engenharia da suíte Guilarde: capacidade BUILD ≥ 70% / RUN ≤ 30%, rotinas, Planner pessoal, FinOps e Despesas & Contratos, portados do MVP "Indicadores de Engenharia" em fases ([ADR-003](docs/adrs/ADR-003-porte-mvp-indicadores-em-fases.md)). Stack: FastAPI, SQLAlchemy 2, Alembic e frontend HTML/CSS/JS, com integração OIDC/Core, sessões BFF, autorização por tenant e testes de isolamento PostgreSQL.
 
-**Módulos:** Capacidade (Fase 1: grupos, semanas, lançamentos e dashboard) Rotinas (Fase 2: rotinas recorrentes, esforço estimado/real e pendências, [ADR-004](docs/adrs/ADR-004-rotinas-esforco-e-pendencias.md)) FinOps (Fase 3: iniciativas de melhoria/automação/otimização como fonte de saving com janela de 6 meses, perfis de custo/hora, ROI e faturas de acompanhamento, [ADR-005](docs/adrs/ADR-005-finops-valor-das-decisoes.md)) e Despesas & Contratos (Fase 4: inventário com auditoria, cancelar/renegociar como iniciativas vinculadas, orçamento mensal e alertas de renovação, [ADR-006](docs/adrs/ADR-006-despesas-contratos-e-conversao.md)) estão implementados; o Planner pessoal é fase futura. Aviso: o grupo padrão "Rotinas (N0)" continua existindo para lançamentos manuais, mas as rotinas cadastradas não somam mais nele; agora somam pela própria categoria no painel. Um tenant é um cliente (PF ou PJ) que contrata o sistema.
+**Módulos:** Capacidade (Fase 1: grupos, semanas, lançamentos e dashboard) Rotinas (Fase 2: rotinas recorrentes, esforço estimado/real e pendências, [ADR-004](docs/adrs/ADR-004-rotinas-esforco-e-pendencias.md)) FinOps (Fase 3: iniciativas de melhoria/automação/otimização como fonte de saving com janela de 6 meses, perfis de custo/hora, ROI e faturas de acompanhamento, [ADR-005](docs/adrs/ADR-005-finops-valor-das-decisoes.md)) e Despesas & Contratos (Fase 4: inventário com auditoria, cancelar/renegociar como iniciativas vinculadas, orçamento mensal e alertas de renovação, [ADR-006](docs/adrs/ADR-006-despesas-contratos-e-conversao.md)) e o Planner pessoal "Meu Dia" (Fase 5: foco, prioridades, tarefas e notas por pessoa, rotinas pendentes e renovações urgentes, e pendências que migram entre dias, [ADR-007](docs/adrs/ADR-007-planner-pessoal-meu-dia.md)) estão implementados. Aviso: o grupo padrão "Rotinas (N0)" continua existindo para lançamentos manuais, mas as rotinas cadastradas não somam mais nele; agora somam pela própria categoria no painel. Um tenant é um cliente (PF ou PJ) que contrata o sistema.
 
 ## Escolha um cenário
 
@@ -54,7 +54,7 @@ Comece pelo [índice](docs/README.md). Os guias principais são [operações](do
 | `docs/` | Contexto, arquitetura, integração, segurança e operação |
 | `src/backend/api/` | Autenticação, contexto de tenant e rotas da aplicação |
 | `src/backend/core/`, `integrations/`, `tenancy/` | Configuração, integração e isolamento |
-| `src/backend/models/`, `schemas/`, `services/`, `repositories/` | Domínios Capacidade (Fase 1), Rotinas (Fase 2), FinOps (Fase 3) e Despesas & Contratos (Fase 4) e pontos de extensão |
+| `src/backend/models/`, `schemas/`, `services/`, `repositories/` | Domínios Capacidade (Fase 1), Rotinas (Fase 2), FinOps (Fase 3) e Despesas & Contratos (Fase 4), Planner pessoal (Fase 5) e pontos de extensão |
 | `src/backend/migrations/` | Migrações, executadas como etapa separada em perfis externos |
 | `src/frontend/` | Login, seleção de tenant e cliente BFF |
 | `tests/` | Contratos, segurança e integração PostgreSQL |

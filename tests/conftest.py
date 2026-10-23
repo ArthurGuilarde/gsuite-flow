@@ -68,9 +68,9 @@ def db_factory(postgres):
     with owner.begin() as db:
         db.execute(
             text(
-                "TRUNCATE tenant_test_records, browser_sessions, rotina_execucoes, rotinas, "
-                "lancamentos, semanas, grupos, iniciativa_participantes, iniciativas, despesas, "
-                "orcamentos_despesas, faturas, fontes_custo, perfis_custo"
+                "TRUNCATE tenant_test_records, browser_sessions, planner_itens, planner_dias, "
+                "rotina_execucoes, rotinas, lancamentos, semanas, grupos, iniciativa_participantes, "
+                "iniciativas, despesas, orcamentos_despesas, faturas, fontes_custo, perfis_custo"
             )
         )
     return factory
