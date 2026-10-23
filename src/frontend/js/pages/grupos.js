@@ -24,13 +24,13 @@ export const grupos = {
                     const amostra = h('span', {class: 'amostra', 'aria-hidden': 'true'});
                     amostra.style.backgroundColor = g.cor;
                     return h('tr', {},
-                        h('td', {text: `${g.icone} ${g.nome}`}),
+                        h('td', {}, `${g.icone} ${g.nome} `, g.sistema ? h('span', {class: 'badge', text: 'sistema'}) : null),
                         h('td', {}, h('span', {class: `badge badge-${g.categoria.toLowerCase()}`, text: g.categoria})),
                         h('td', {}, amostra, ` ${g.cor}`),
                         h('td', {text: g.ativo ? 'Ativo' : 'Inativo'}),
                         escrita ? h('td', {class: 'acoes'},
                             h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => editar(g)}}, 'Editar'),
-                            h('button', {type: 'button', class: 'perigo pequeno', on: {click: () => excluir(g)}}, 'Excluir')) : null);
+                            h('button', {type: 'button', class: 'perigo pequeno', disabled: g.sistema, title: g.sistema ? 'Grupo de sistema não pode ser excluído' : null, on: {click: () => excluir(g)}}, 'Excluir')) : null);
                 })))));
         }
 
@@ -50,6 +50,7 @@ export const grupos = {
             const icone = h('input', {type: 'text', maxLength: 16, value: g?.icone ?? '📋'});
             const cor = h('input', {type: 'color', value: g?.cor ?? '#64748B'});
             const ativo = h('input', {type: 'checkbox', checked: g ? g.ativo : true});
+            if (g?.sistema) { nome.disabled = true; categoria.disabled = true; ativo.disabled = true; }
             const form = h('form', {class: 'formulario', on: {submit: async evento => {
                 evento.preventDefault();
                 const corpo = {nome: nome.value.trim(), categoria: categoria.value, icone: icone.value.trim() || '📋', cor: cor.value};
@@ -64,6 +65,7 @@ export const grupos = {
                 h('h2', {text: g ? 'Editar grupo' : 'Novo grupo'}),
                 campo('Nome', nome), campo('Categoria', categoria), campo('Ícone', icone), campo('Cor', cor),
                 g ? h('label', {class: 'campo-check'}, ativo, ' Ativo (inativos não entram no painel)') : null,
+                g?.sistema ? h('p', {class: 'texto-suave', text: 'Grupo de sistema: nome, categoria e situação não podem ser alterados.'}) : null,
                 h('div', {class: 'acoes'},
                     h('button', {type: 'submit'}, 'Salvar'),
                     h('button', {type: 'button', class: 'secundario', on: {click: () => formulario.replaceChildren()}}, 'Cancelar')));

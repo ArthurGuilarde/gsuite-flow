@@ -1,5 +1,5 @@
 import {api} from './api.js';
-import {state} from './state.js';
+import {state, podeEscrever} from './state.js';
 import {registrarRotas, iniciarRouter, renderizar, limparConteudo} from './router.js';
 import {painel} from './pages/painel.js';
 import {lancamentos} from './pages/lancamentos.js';
@@ -15,6 +15,8 @@ import {despesasInventario} from './pages/despesas-inventario.js';
 import {despesasOrcamento} from './pages/despesas-orcamento.js';
 import {perfis} from './pages/perfis.js';
 import {meuDia} from './pages/meu-dia.js';
+import {demandas} from './pages/demandas.js';
+import {demandasTriagem} from './pages/demandas-triagem.js';
 
 const el = id => document.getElementById(id);
 const status = message => { el('status').textContent = message; };
@@ -32,6 +34,8 @@ registrarRotas({
     '/despesas': despesasPainel,
     '/despesas/inventario': despesasInventario,
     '/despesas/orcamento': despesasOrcamento,
+    '/demandas': demandas,
+    '/demandas/triagem': demandasTriagem,
     '/config/grupos': grupos,
     '/config/semanas': semanas,
     '/config/rotinas': rotinasCatalogo,
@@ -42,6 +46,7 @@ async function selectTenant(tenantId) {
     const version = ++selectionVersion;
     state.tenantId = tenantId;
     state.context = null;
+    for (const link of document.querySelectorAll('[data-escrita]')) link.hidden = true;
     limparConteudo();
     if (!tenantId) { status('Nenhum espaço autorizado para esta aplicação.'); return; }
     status('Carregando espaço…');
@@ -49,6 +54,7 @@ async function selectTenant(tenantId) {
         const context = await api('/api/v1/context');
         if (version !== selectionVersion) return;
         state.context = context;
+        for (const link of document.querySelectorAll('[data-escrita]')) link.hidden = !podeEscrever();
         status('');
         if (routerIniciado) await renderizar();
         else { routerIniciado = true; await iniciarRouter(el('content')); }

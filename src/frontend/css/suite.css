@@ -387,3 +387,16 @@ details.fonte summary{cursor:pointer;margin-bottom:10px}
   .md-grade{display:block}
   .md-item input[type=checkbox]{display:inline-block}
 }
+
+/* Demandas */
+.dem-largo{grid-column:1/-1}
+.dem-largo textarea{width:100%;min-width:0;box-sizing:border-box;resize:vertical}
+.dem-descricao{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.9rem;margin:4px 0}
+.badge-prio-alta{background:#fee2e2;color:var(--danger)}
+.badge-prio-media{background:#fef3c7;color:var(--amber-dark)}
+.badge-prio-baixa{background:#e6edf0;color:var(--primary)}
+.badge-dem-aberta{background:#fef3c7;color:var(--amber-dark)}
+.badge-dem-concluida{background:#d1fae5;color:var(--green-dark)}
+.badge-dem-cancelada{background:#e6edf0;color:var(--muted)}
+.dem-triagem-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.dem-triagem-acoes select{min-width:180px}

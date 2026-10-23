@@ -50,7 +50,9 @@ function barras(grupos, filtro) {
             h('div', {class: 'barra-empilhada'}, segAberto, segResolvido),
             h('div', {class: 'barra-legenda'},
                 h('span', {class: 'leg-aberto', text: `${numero(g.abertos)} abertos (${pct(g.pct_aberto)})`}),
-                h('span', {class: 'leg-resolvido', text: `${numero(g.resolvidos)} resolvidos (${pct(g.taxa_resolucao)})`})));
+                h('span', {class: 'leg-resolvido', text: `${numero(g.resolvidos)} resolvidos (${pct(g.taxa_resolucao)})`})),
+            g.demandas_abertas > 0 || g.demandas_resolvidas > 0 ? h('div', {class: 'texto-suave',
+                text: `Inclui demandas: ${numero(g.demandas_abertas)} abertas, ${numero(g.demandas_resolvidas)} resolvidas`}) : null);
     });
 }
 
