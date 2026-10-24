@@ -1,6 +1,7 @@
 import {get, post, patch, del} from '../api.js';
 import {podeEscrever} from '../state.js';
-import {h, campo, confirmar, estadoVazio, data, minutos, toast, tratarErro} from '../ui.js';
+import {h, campo, carregando, confirmar, estadoVazio, data, icone, minutos, toast, tratarErro} from '../ui.js';
+import {badgeSituacaoAtivo, botaoEditar, botaoExcluir, botaoNovo, cabecalhoTabela} from './capacidade-comum.js';
 import {DIAS, TIPOS, badgeAgendamento, badgeCategoria, tituloComLink} from './rotinas.js';
 
 const PERIODOS = ['Manhã', 'Tarde', 'Integral'];
@@ -15,25 +16,28 @@ export const rotinasCatalogo = {
         const formulario = h('div', {});
 
         async function carregar() {
+            if (!lista.firstChild) lista.replaceChildren(carregando(2));
             const itens = await get('/api/v1/rotinas', undefined, signal);
             if (signal.aborted) return;
             if (!itens.length) {
-                lista.replaceChildren(estadoVazio('Nenhuma rotina cadastrada',
-                    escrita ? 'Crie uma rotina ou use as rotinas padrão para começar.' : 'Peça a quem tem permissão de edição para cadastrar as rotinas.'));
+                lista.replaceChildren(estadoVazio({titulo: 'Nenhuma rotina cadastrada', icone: 'repeat'},
+                    escrita ? 'Crie uma rotina ou use as rotinas padrão para começar.' : 'Peça a quem tem permissão de edição para cadastrar as rotinas.',
+                    escrita ? h('button', {type: 'button', on: {click: criarPadrao}}, icone('plus', {classe: 'icone-sm'}), 'Criar rotinas padrão') : null,
+                    escrita ? h('button', {type: 'button', class: 'secundario', on: {click: () => editar()}}, 'Nova rotina') : null));
                 return;
             }
             lista.replaceChildren(h('div', {class: 'tabela-wrap'}, h('table', {},
-                h('thead', {}, h('tr', {}, ['Rotina', 'Categoria', 'Agendamento', 'Esforço', 'Vigência', 'Situação', escrita ? 'Ações' : null].map(t => t && h('th', {text: t})))),
+                cabecalhoTabela(['Rotina', 'Categoria', 'Agendamento', 'Esforço', 'Vigência', 'Situação'], escrita, ['Esforço']),
                 h('tbody', {}, itens.map(r => h('tr', {class: r.ativo ? '' : 'inativa'},
                     h('td', {}, tituloComLink(r.titulo, r.link_recurso), r.responsavel ? h('div', {class: 'texto-suave', text: r.responsavel}) : null),
                     h('td', {}, badgeCategoria(r.categoria)),
                     h('td', {}, badgeAgendamento(r)),
-                    h('td', {text: minutos(r.esforco_estimado_min)}),
-                    h('td', {text: `desde ${data(r.inicio_vigencia)}`}),
-                    h('td', {}, h('span', {class: `badge ${r.ativo ? 'badge-resolvido' : ''}`, text: r.ativo ? 'Ativa' : 'Inativa'})),
+                    h('td', {class: 'num', text: minutos(r.esforco_estimado_min)}),
+                    h('td', {class: 'texto-suave', text: `desde ${data(r.inicio_vigencia)}`}),
+                    h('td', {}, badgeSituacaoAtivo(r.ativo, 'Ativa', 'Inativa')),
                     escrita ? h('td', {class: 'acoes'},
-                        h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => editar(r)}}, 'Editar'),
-                        h('button', {type: 'button', class: 'perigo pequeno', on: {click: () => excluir(r)}}, 'Excluir')) : null))))));
+                        botaoEditar(`Editar rotina ${r.titulo}`, () => editar(r)),
+                        botaoExcluir(`Excluir rotina ${r.titulo}`, () => excluir(r))) : null))))));
         }
 
         async function recarregar() {
@@ -76,7 +80,7 @@ export const rotinasCatalogo = {
             tipo.addEventListener('change', alternar);
             alternar();
 
-            const form = h('form', {class: 'formulario', on: {submit: async evento => {
+            const form = h('form', {class: 'formulario form-cap', on: {submit: async evento => {
                 evento.preventDefault();
                 const url = link.value.trim();
                 if (url && !/^https?:\/\//i.test(url)) { toast('O link do recurso deve começar com http:// ou https://.', 'error'); link.focus(); return; }
@@ -96,7 +100,7 @@ export const rotinasCatalogo = {
                     await recarregar();
                 } catch (erro) { tratarErro(erro); }
             }}},
-                h('h2', {text: r ? 'Editar rotina' : 'Nova rotina'}),
+                h('h2', {}, icone(r ? 'pencil' : 'plus'), r ? 'Editar rotina' : 'Nova rotina'),
                 campo('Título', titulo), campo('Categoria', categoria), campo('Responsável', responsavel),
                 campo('Tipo de agendamento', tipo), campoDiaSemana, campoDiaMes, campo('Período', periodo),
                 campo('Esforço estimado por ocorrência (min)', esforco),
@@ -104,8 +108,8 @@ export const rotinasCatalogo = {
                 campo('Link do recurso', link), campo('Descrição', descricao),
                 h('label', {class: 'campo-check'}, ativo, ' Ativa (inativas só aparecem em semanas com execução registrada)'),
                 h('div', {class: 'acoes'},
-                    h('button', {type: 'submit'}, 'Salvar'),
-                    h('button', {type: 'button', class: 'secundario', on: {click: () => formulario.replaceChildren()}}, 'Cancelar')));
+                    h('button', {type: 'button', class: 'secundario', on: {click: () => formulario.replaceChildren()}}, 'Cancelar'),
+                    h('button', {type: 'submit'}, icone('check', {classe: 'icone-sm'}), 'Salvar')));
             formulario.replaceChildren(h('section', {class: 'cartao'}, form));
             titulo.focus();
         }
@@ -121,9 +125,9 @@ export const rotinasCatalogo = {
         container.replaceChildren(
             h('div', {class: 'barra-acoes'},
                 h('div', {class: 'acoes'},
-                    escrita ? h('button', {type: 'button', on: {click: () => editar()}}, 'Nova rotina') : null,
-                    escrita ? h('button', {type: 'button', class: 'secundario', on: {click: criarPadrao}}, 'Criar rotinas padrão') : null,
-                    h('a', {class: 'botao secundario', href: '#/rotinas', text: 'Ir para o checklist'}))),
+                    h('a', {class: 'botao secundario', href: '#/rotinas'}, icone('list-checks', {classe: 'icone-sm'}), 'Ir para o checklist'),
+                    escrita ? h('button', {type: 'button', class: 'secundario', on: {click: criarPadrao}}, icone('list-todo', {classe: 'icone-sm'}), 'Criar rotinas padrão') : null,
+                    escrita ? botaoNovo('Nova rotina', () => editar()) : null)),
             formulario, lista);
         await carregar();
     }

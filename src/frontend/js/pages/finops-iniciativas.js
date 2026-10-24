@@ -1,7 +1,7 @@
 import {get, post, put, del} from '../api.js';
 import {podeEscrever} from '../state.js';
-import {h, campo, confirmar, estadoVazio, competencia, decimal, mesAtual, moeda, pct, toast, tratarErro} from '../ui.js';
-import {CUSTO_HORA_SUGERIDO, FREQUENCIAS, MODOS, ROTULO_TIPO, STATUS, TIPOS, badgeModo, badgeStatus, janela, opcao, textoPayback, selo} from './finops-comum.js';
+import {h, campo, carregando, confirmar, estadoVazio, icone, competencia, decimal, mesAtual, moeda, pct, toast, tratarErro} from '../ui.js';
+import {CUSTO_HORA_SUGERIDO, FREQUENCIAS, MODOS, ROTULO_TIPO, STATUS, TIPOS, badgeModo, badgeStatus, botaoEditar, botaoExcluir, cabecalho, janela, nota, opcao, textoPayback, selo} from './finops-comum.js';
 
 const MAX_PARTICIPANTES = 20;
 const numeroOuNulo = texto => (texto === '' || texto === null || texto === undefined ? null : Number(texto));
@@ -38,7 +38,7 @@ function linhaParticipante(p, perfis, aoMudar, aoRemover) {
         campo('Horas antes (por execução)', antes), campo('Horas depois (por execução)', depois),
         h('div', {class: 'participante-fim'},
             h('span', {class: 'texto-suave pequeno-texto', text: 'Saving mensal'}), total,
-            h('button', {type: 'button', class: 'perigo pequeno', on: {click: () => aoRemover(linha)}}, 'Remover')));
+            h('button', {type: 'button', class: 'secundario perigo pequeno', on: {click: () => aoRemover(linha)}}, icone('trash-2', {classe: 'icone-sm'}), 'Remover')));
     const linha = {
         raiz,
         corpo: () => ({perfil_nome: nome.value.trim(), custo_hora: numeroOuZero(custo.value), qtd_pessoas: Math.round(Number(qtd.value)),
@@ -50,7 +50,7 @@ function linhaParticipante(p, perfis, aoMudar, aoRemover) {
 
 function cartaoPrevia() {
     const corpo = h('div', {class: 'previa-corpo'});
-    const raiz = h('aside', {class: 'cartao previa', 'aria-live': 'polite'}, h('h2', {text: 'Prévia do cálculo'}), corpo);
+    const raiz = h('aside', {class: 'cartao previa', 'aria-live': 'polite'}, h('h2', {class: 'titulo-secao'}, icone('calculator'), 'Prévia do cálculo'), corpo);
     const mensagem = texto => corpo.replaceChildren(h('p', {class: 'texto-suave', text: texto}));
     mensagem('Preencha o formulário para ver o valor financeiro.');
     return {
@@ -92,15 +92,16 @@ export const finopsIniciativas = {
             const itens = await get('/api/v1/finops/iniciativas', {tipo: fTipo.value, status: fStatus.value, referencia: mesAtual()}, signal);
             if (signal.aborted) return;
             if (!itens.length) {
-                lista.replaceChildren(estadoVazio('Nenhuma iniciativa', escrita ? 'Registre uma melhoria, automação ou otimização para demonstrar o valor financeiro da decisão.' : 'Peça a quem tem permissão de edição para cadastrar as iniciativas.'));
+                lista.replaceChildren(estadoVazio({titulo: 'Nenhuma iniciativa', icone: 'lightbulb'}, escrita ? 'Registre uma melhoria, automação ou otimização para demonstrar o valor financeiro da decisão.' : 'Peça a quem tem permissão de edição para cadastrar as iniciativas.',
+                    escrita ? h('button', {type: 'button', on: {click: () => editar()}}, icone('plus', {classe: 'icone-sm'}), 'Nova iniciativa') : null));
                 return;
             }
-            lista.replaceChildren(h('div', {class: 'tabela-wrap'}, h('table', {},
-                h('thead', {}, h('tr', {}, ['Iniciativa', 'Status', 'Janela', 'Valor/mês', 'Saving acumulado', 'ROI / payback', escrita ? 'Ações' : null].map(t => t && h('th', {text: t})))),
+            lista.replaceChildren(h('div', {class: 'tabela-wrap'}, h('table', {class: 'tabela-fin'},
+                cabecalho(['Iniciativa', 'Status', 'Janela', ['Valor/mês', true], ['Saving acumulado', true], 'ROI / payback', escrita ? ['Ações', true] : null]),
                 h('tbody', {}, itens.map(i => {
                     const c = i.calculo;
                     return h('tr', {class: c.status === 'ENCERRADA' || c.status === 'PLANEJADA' ? 'inativa' : ''},
-                        h('td', {}, h('span', {class: 'rotina-titulo', text: i.titulo}),
+                        h('td', {}, h('span', {class: 'item-titulo', text: i.titulo}),
                             h('div', {class: 'texto-suave pequeno-texto'}, `${ROTULO_TIPO[i.tipo] ?? i.tipo} · `, badgeModo(i.modo_calculo), i.fonte_nome ? ` · ${i.fonte_nome}` : '',
                             i.despesa_nome ? [' · ', h('a', {class: i.conversao_despesa ? 'badge selo-despesa' : '', href: '#/despesas/inventario', text: i.conversao_despesa ? `da despesa ${i.despesa_nome}` : `despesa: ${i.despesa_nome}`})] : null)),
                         h('td', {}, badgeStatus(c.status)),
@@ -110,11 +111,11 @@ export const finopsIniciativas = {
                         h('td', {}, c.investimento_total > 0
                             ? [`${c.roi_janela_pct === null ? '—' : pct(c.roi_janela_pct)} · ${textoPayback(c.payback_meses)}`, h('div', {class: c.se_paga_na_janela ? 'var-boa pequeno-texto' : 'var-ruim pequeno-texto', text: c.se_paga_na_janela ? 'Se paga na janela' : 'Fora da janela'})]
                             : h('span', {class: 'texto-suave', text: 'Sem investimento'})),
-                        escrita ? h('td', {class: 'acoes'},
-                            h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => editar(i)}}, 'Editar'),
+                        escrita ? h('td', {class: 'acoes'}, h('div', {class: 'acoes'},
+                            botaoEditar(`iniciativa ${i.titulo}`, () => editar(i)),
                             i.conversao_despesa
                                 ? h('span', {class: 'texto-suave pequeno-texto'}, 'Para desfazer, reverta pela ', h('a', {href: '#/despesas/inventario', text: 'despesa'}), '.')
-                                : h('button', {type: 'button', class: 'perigo pequeno', on: {click: () => excluir(i)}}, 'Excluir')) : null);
+                                : botaoExcluir(`iniciativa ${i.titulo}`, () => excluir(i)))) : null);
                 })))));
         }
         async function recarregar() { try { await carregar(); } catch (erro) { if (!signal.aborted) tratarErro(erro); } }
@@ -156,7 +157,7 @@ export const finopsIniciativas = {
             const previa = cartaoPrevia();
             const linhas = [];
             const listaParticipantes = h('div', {class: 'participantes'});
-            const botaoAdd = h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => { adicionar(null); agendar(); }}}, 'Adicionar participante');
+            const botaoAdd = h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => { adicionar(null); agendar(); }}}, icone('plus', {classe: 'icone-sm'}), 'Adicionar participante');
             function adicionar(p) {
                 if (linhas.length >= MAX_PARTICIPANTES) return;
                 const linha = linhaParticipante(p, perfis, agendar, remover);
@@ -257,7 +258,7 @@ export const finopsIniciativas = {
             }, input: agendar, change: agendar}},
                 h('h2', {text: ini ? 'Editar iniciativa' : 'Nova iniciativa'}),
                 h('div', {class: 'formulario'}, campo('Título', titulo), campo('Tipo', tipo), campo('Fonte de custo (opcional)', fonte), campo('Despesa vinculada (opcional)', despesa)),
-                ini?.conversao_despesa ? h('p', {class: 'regra-janela', role: 'note'}, `Iniciativa gerada pela despesa "${ini.despesa_nome}": o vínculo é fixo e a exclusão é feita revertendo a ação na despesa.`) : null,
+                ini?.conversao_despesa ? nota(`Iniciativa gerada pela despesa "${ini.despesa_nome}": o vínculo é fixo e a exclusão é feita revertendo a ação na despesa.`) : null,
                 h('div', {class: 'formulario'}, campo('Descrição (opcional)', descricao)),
                 h('div', {class: 'campo'}, h('span', {text: 'Como medir o valor'}), h('div', {class: 'chips', role: 'group', 'aria-label': 'Modo de cálculo'}, chipsModo)),
                 blocoDireto, blocoTempo,
@@ -271,8 +272,8 @@ export const finopsIniciativas = {
                         campo('Investimento em R$', invReais), campo('Horas do time investidas', invHoras),
                         campo('Perfil do custo/hora', invPerfil), campo('Custo/hora das horas (R$)', invCusto))),
                 h('div', {class: 'acoes'},
-                    h('button', {type: 'submit'}, 'Salvar'),
-                    h('button', {type: 'button', class: 'secundario', on: {click: () => { clearTimeout(temporizador); controleSim?.abort(); formulario.replaceChildren(); }}}, 'Cancelar')));
+                    h('button', {type: 'button', class: 'secundario', on: {click: () => { clearTimeout(temporizador); controleSim?.abort(); formulario.replaceChildren(); }}}, 'Cancelar'),
+                    h('button', {type: 'submit'}, icone('check', {classe: 'icone-sm'}), 'Salvar')));
             alternar();
             formulario.replaceChildren(h('section', {class: 'cartao'}, h('div', {class: 'form-previa'}, form, previa.raiz)));
             titulo.focus();
@@ -281,11 +282,12 @@ export const finopsIniciativas = {
 
         for (const c of [fTipo, fStatus]) c.addEventListener('change', recarregar);
         container.replaceChildren(
-            h('p', {class: 'regra-janela', role: 'note'}, h('strong', {text: 'Como o saving é contado: '}), 'soma por N meses (padrão 6) a partir do início; depois vira novo normal e deixa de somar no período.'),
+            nota(h('strong', {text: 'Como o saving é contado: '}), 'soma por N meses (padrão 6) a partir do início; depois vira novo normal e deixa de somar no período.'),
             h('div', {class: 'barra-acoes'},
-                h('div', {class: 'acoes'}, escrita ? h('button', {type: 'button', on: {click: () => editar()}}, 'Nova iniciativa') : null),
+                h('div', {class: 'acoes'}, escrita ? h('button', {type: 'button', on: {click: () => editar()}}, icone('plus', {classe: 'icone-sm'}), 'Nova iniciativa') : null),
                 h('div', {class: 'filtros'}, campo('Tipo', fTipo), campo('Status', fStatus))),
             formulario, lista);
+        lista.replaceChildren(carregando(2));
         [perfis, fontes, despesas] = await Promise.all([
             get('/api/v1/finops/perfis', undefined, signal).then(l => l.filter(p => p.ativo)),
             get('/api/v1/finops/fontes', undefined, signal),

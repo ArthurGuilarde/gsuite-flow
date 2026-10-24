@@ -34,7 +34,7 @@ function moldura(rotulo, teto, extras) {
     const y = valor => MARGEM.t + h - (valor / teto) * h;
     for (let i = 0; i <= 4; i++) {
         const v = (teto / 4) * i;
-        raiz.append(svg('line', {class: 'g-grade', x1: MARGEM.e, x2: L - MARGEM.d, y1: y(v), y2: y(v)}),
+        raiz.append(svg('line', {class: i === 0 ? 'g-grade g-base' : 'g-grade', x1: MARGEM.e, x2: L - MARGEM.d, y1: y(v), y2: y(v)}),
             texto(moedaCurta(v), {class: 'g-eixo', x: MARGEM.e - 6, y: y(v) + 4, 'text-anchor': 'end'}));
     }
     extras?.(raiz, {w, h, y});
@@ -62,8 +62,10 @@ export function graficoSaving(serie) {
         const direto = Math.max(0, s.saving_direto ?? 0), horas = Math.max(0, s.saving_horas ?? 0);
         const topoDireto = y(direto), topoHoras = y(direto + horas);
         const grupo = svg('g', {class: 'g-coluna'}, dica(`${competencia(s.competencia, true)}${s.projetado ? ' (projetado)' : ''}\nEconomia direta: ${moeda(s.saving_direto)}\nHoras do time: ${moeda(s.saving_horas)}\nTotal: ${moeda(s.saving_total)}`));
-        if (direto > 0) grupo.append(svg('rect', {class: `g-direto${proj}`, x: cx - barra / 2, y: topoDireto, width: barra, height: y(0) - topoDireto}));
-        if (horas > 0) grupo.append(svg('rect', {class: `g-horas${proj}`, x: cx - barra / 2, y: topoHoras, width: barra, height: topoDireto - topoHoras}));
+        if (direto > 0) grupo.append(svg('rect', {class: `g-direto${proj}`, x: cx - barra / 2, y: topoDireto, width: barra, height: y(0) - topoDireto, rx: horas > 0 ? 0 : 2}));
+        if (horas > 0) grupo.append(svg('rect', {class: `g-horas${proj}`, x: cx - barra / 2, y: topoHoras, width: barra, height: topoDireto - topoHoras, rx: 2}));
+        // Total acima da barra quando há poucos meses (evita poluir séries longas).
+        if (total <= 12 && direto + horas > 0) grupo.append(texto(moedaCurta(direto + horas), {class: 'g-valor', x: cx, y: topoHoras - 5, 'text-anchor': 'middle'}));
         // Área de toque transparente para o tooltip nativo mesmo em barras zeradas.
         grupo.append(svg('rect', {class: 'g-alvo', x: cx - larg / 2, y: MARGEM.t, width: larg, height: A - MARGEM.t - MARGEM.b}));
         raiz.append(grupo);
@@ -107,7 +109,10 @@ export function legenda(itens) {
     ul.className = 'legenda';
     for (const [classe, rotulo] of itens) {
         const li = document.createElement('li');
-        const marca = svg('svg', {class: 'legenda-marca', viewBox: '0 0 14 14', 'aria-hidden': 'true'}, svg('rect', {class: classe, x: 0, y: 0, width: 14, height: 14, rx: 3}));
+        // Séries de linha ganham um traço; as demais, um quadrado.
+        const linha = /g-(orcado|realizado)/.test(classe);
+        const marca = svg('svg', {class: 'legenda-marca', viewBox: '0 0 14 14', 'aria-hidden': 'true'},
+            linha ? svg('line', {class: `g-linha ${classe}`, x1: 0, x2: 14, y1: 7, y2: 7}) : svg('rect', {class: classe, x: 0, y: 0, width: 14, height: 14, rx: 3}));
         li.append(marca, document.createTextNode(rotulo));
         ul.append(li);
     }
@@ -125,8 +130,8 @@ export function graficoDespesas(serie) {
         const cx = MARGEM.e + larg * (i + 0.5);
         const rec = Math.max(0, s.recorrente ?? 0), pon = Math.max(0, s.pontual ?? 0);
         const grupo = svg('g', {class: 'g-coluna'}, dica(`${competencia(s.competencia, true)}\nRecorrente: ${moeda(s.recorrente)}\nPontual: ${moeda(s.pontual)}\nTotal: ${moeda(s.total)}\nOrçado: ${s.orcado === null || s.orcado === undefined ? 'não cadastrado' : moeda(s.orcado)}`));
-        if (rec > 0) grupo.append(svg('rect', {class: 'g-recorrente', x: cx - barra / 2, y: y(rec), width: barra, height: y(0) - y(rec)}));
-        if (pon > 0) grupo.append(svg('rect', {class: 'g-pontual', x: cx - barra / 2, y: y(rec + pon), width: barra, height: y(rec) - y(rec + pon)}));
+        if (rec > 0) grupo.append(svg('rect', {class: 'g-recorrente', x: cx - barra / 2, y: y(rec), width: barra, height: y(0) - y(rec), rx: pon > 0 ? 0 : 2}));
+        if (pon > 0) grupo.append(svg('rect', {class: 'g-pontual', x: cx - barra / 2, y: y(rec + pon), width: barra, height: y(rec) - y(rec + pon), rx: 2}));
         grupo.append(svg('rect', {class: 'g-alvo', x: cx - larg / 2, y: MARGEM.t, width: larg, height: A - MARGEM.t - MARGEM.b}));
         raiz.append(grupo);
     });

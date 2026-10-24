@@ -25,10 +25,32 @@ function anexar(el, children) {
     }
 }
 
+const SVG = 'http://www.w3.org/2000/svg';
+
+// Ícone do sprite local (img/icones.svg). Decorativo por padrão; com `rotulo`, vira imagem acessível.
+export function icone(nome, {classe = '', rotulo} = {}) {
+    const svg = document.createElementNS(SVG, 'svg');
+    svg.setAttribute('class', `icone ${classe}`.trim());
+    if (rotulo) { svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', rotulo); }
+    else svg.setAttribute('aria-hidden', 'true');
+    const uso = document.createElementNS(SVG, 'use');
+    uso.setAttribute('href', `/img/icones.svg#${nome}`);
+    svg.append(uso);
+    return svg;
+}
+
+// Placeholder de carregamento com `linhas` blocos.
+export function carregando(linhas = 3) {
+    return h('div', {class: 'carregando', 'aria-busy': 'true', 'aria-label': 'Carregando'},
+        Array.from({length: linhas}, () => h('div', {class: 'esqueleto esqueleto-cartao'})));
+}
+
+const ICONE_TOAST = {success: 'circle-check', error: 'triangle-alert', info: 'info'};
+
 export function toast(mensagem, tipo = 'info') {
     const regiao = document.getElementById('toasts');
     if (!regiao) return;
-    const item = h('div', {class: `toast toast-${tipo}`, role: tipo === 'error' ? 'alert' : 'status'}, mensagem);
+    const item = h('div', {class: `toast toast-${tipo}`, role: tipo === 'error' ? 'alert' : 'status'}, icone(ICONE_TOAST[tipo] ?? 'info'), h('span', {}, mensagem));
     regiao.append(item);
     setTimeout(() => item.remove(), tipo === 'error' ? 7000 : 4000);
 }
@@ -95,8 +117,10 @@ export function campo(rotulo, controle) {
     return h('label', {class: 'campo'}, h('span', {text: rotulo}), controle);
 }
 
+// `titulo` pode ser string ou {titulo, icone}; o ícone padrão é "inbox".
 export function estadoVazio(titulo, texto, ...acoes) {
-    return h('div', {class: 'estado-vazio'}, h('h3', {text: titulo}), h('p', {text: texto}), acoes.length ? h('div', {class: 'acoes'}, acoes) : null);
+    const {titulo: t, icone: nome = 'inbox'} = typeof titulo === 'object' && titulo !== null ? titulo : {titulo};
+    return h('div', {class: 'estado-vazio'}, h('div', {class: 'icone-vazio'}, icone(nome)), h('h3', {text: t}), h('p', {text: texto}), acoes.length ? h('div', {class: 'acoes'}, acoes) : null);
 }
 
 export function salvarArquivo(nome, conteudo, tipo) {

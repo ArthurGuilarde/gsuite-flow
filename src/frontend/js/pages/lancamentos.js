@@ -1,6 +1,7 @@
 import {get, post, patch, put, del} from '../api.js';
 import {podeEscrever} from '../state.js';
-import {h, campo, confirmar, estadoVazio, numero, toast, tratarErro} from '../ui.js';
+import {h, campo, carregando, confirmar, estadoVazio, icone, numero, toast, tratarErro} from '../ui.js';
+import {botaoEditar, botaoExcluir, botaoNovo, cabecalhoTabela, tileGrupo} from './capacidade-comum.js';
 
 export const lancamentos = {
     titulo: 'Lançamentos',
@@ -24,23 +25,31 @@ export const lancamentos = {
         const formulario = h('div', {});
 
         async function carregar() {
+            if (!lista.firstChild) lista.replaceChildren(carregando(2));
             const itens = await get('/api/v1/lancamentos', {grupo_id: filtroGrupo.value, semana_id: filtroSemana.value}, signal);
             if (signal.aborted) return;
             if (!itens.length) {
-                lista.replaceChildren(estadoVazio('Nenhum lançamento', escrita ? 'Use "Inicializar semana" para criar os lançamentos zerados de todos os grupos.' : 'Não há lançamentos para este filtro.'));
+                lista.replaceChildren(estadoVazio({titulo: 'Nenhum lançamento', icone: 'list-checks'},
+                    escrita ? 'Use "Inicializar semana" para criar os lançamentos zerados de todos os grupos.' : 'Não há lançamentos para este filtro.',
+                    escrita ? h('button', {type: 'button', on: {click: inicializar}}, icone('rotate-ccw', {classe: 'icone-sm'}), 'Inicializar semana') : null));
                 return;
             }
+            const soma = status => itens.filter(l => l.status === status).reduce((t, l) => t + l.quantidade, 0);
             lista.replaceChildren(h('div', {class: 'tabela-wrap'}, h('table', {},
-                h('thead', {}, h('tr', {}, ['Semana', 'Grupo', 'Status', 'Qtd.', 'Observação', escrita ? 'Ações' : null].map(t => t && h('th', {text: t})))),
+                cabecalhoTabela(['Semana', 'Grupo', 'Status', 'Qtd.', 'Observação'], escrita, ['Qtd.']),
                 h('tbody', {}, itens.map(l => h('tr', {},
                     h('td', {text: l.semana_identificacao}),
-                    h('td', {text: `${l.grupo_icone} ${l.grupo_nome}`}),
-                    h('td', {}, h('span', {class: `badge badge-${l.status.toLowerCase()}`, text: l.status === 'ABERTO' ? 'Aberto' : 'Resolvido'})),
+                    h('td', {}, h('span', {class: 'celula-grupo'}, tileGrupo(l.grupo_icone, l.grupo_cor), l.grupo_nome)),
+                    h('td', {}, h('span', {class: `badge badge-ponto badge-${l.status.toLowerCase()}`, text: l.status === 'ABERTO' ? 'Aberto' : 'Resolvido'})),
                     h('td', {class: 'num', text: numero(l.quantidade)}),
-                    h('td', {text: l.observacao ?? ''}),
+                    h('td', {class: 'col-obs', text: l.observacao ?? '—'}),
                     escrita ? h('td', {class: 'acoes'},
-                        h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => editar(l)}}, 'Editar'),
-                        h('button', {type: 'button', class: 'perigo pequeno', on: {click: () => excluir(l)}}, 'Excluir')) : null))))));
+                        botaoEditar(`Editar lançamento de ${l.grupo_nome}`, () => editar(l)),
+                        botaoExcluir(`Excluir lançamento de ${l.grupo_nome}`, () => excluir(l))) : null)))),
+                h('div', {class: 'rodape-tabela'},
+                    h('span', {}, `${numero(itens.length)} lançamentos`),
+                    h('span', {}, 'Abertos: ', h('strong', {text: numero(soma('ABERTO'))})),
+                    h('span', {}, 'Resolvidos: ', h('strong', {text: numero(soma('RESOLVIDO'))})))));
         }
 
         async function recarregar() {
@@ -53,9 +62,11 @@ export const lancamentos = {
         }
 
         function mostrar(titulo, form) {
-            formulario.replaceChildren(h('section', {class: 'cartao'}, h('h2', {text: titulo}), form));
+            formulario.replaceChildren(h('section', {class: 'cartao'}, h('div', {class: 'cartao-topo'}, h('h2', {}, icone('pencil'), titulo)), form));
+            form.querySelector('select, input')?.focus();
         }
         const cancelar = () => h('button', {type: 'button', class: 'secundario', on: {click: () => formulario.replaceChildren()}}, 'Cancelar');
+        const salvar = texto => h('button', {type: 'submit'}, icone('check', {classe: 'icone-sm'}), texto);
         const inteiro = (valor = 0) => h('input', {type: 'number', min: 0, step: 1, required: true, value: String(valor)});
 
         function editar(l = null) {
@@ -67,7 +78,7 @@ export const lancamentos = {
             status.value = l?.status ?? 'ABERTO';
             const quantidade = inteiro(l?.quantidade ?? 0);
             const obs = h('textarea', {rows: 2, maxLength: 1000}, l?.observacao ?? '');
-            mostrar(l ? 'Editar lançamento' : 'Novo lançamento', h('form', {class: 'formulario', on: {submit: async evento => {
+            mostrar(l ? 'Editar lançamento' : 'Novo lançamento', h('form', {class: 'formulario form-cap', on: {submit: async evento => {
                 evento.preventDefault();
                 const corpo = {grupo_id: grupo.value, semana_id: semana.value, status: status.value, quantidade: Number(quantidade.value), observacao: obs.value.trim() || null};
                 try {
@@ -78,7 +89,7 @@ export const lancamentos = {
                 } catch (erro) { tratarErro(erro); }
             }}},
                 campo('Grupo', grupo), campo('Semana', semana), campo('Status', status), campo('Quantidade', quantidade), campo('Observação', obs),
-                h('div', {class: 'acoes'}, h('button', {type: 'submit'}, 'Salvar'), cancelar())));
+                h('div', {class: 'acoes'}, cancelar(), salvar('Salvar'))));
         }
 
         function par() {
@@ -88,7 +99,7 @@ export const lancamentos = {
             semana.value = filtroSemana.value || listaSemanas[0].id;
             const aberto = inteiro(), resolvido = inteiro();
             const obsA = h('input', {type: 'text', maxLength: 1000}), obsR = h('input', {type: 'text', maxLength: 1000});
-            mostrar('Lançamento rápido em par', h('form', {class: 'formulario', on: {submit: async evento => {
+            mostrar('Lançamento rápido em par', h('form', {class: 'formulario form-cap', on: {submit: async evento => {
                 evento.preventDefault();
                 try {
                     await put('/api/v1/lancamentos/par', {grupo_id: grupo.value, semana_id: semana.value,
@@ -102,7 +113,7 @@ export const lancamentos = {
                 campo('Grupo', grupo), campo('Semana', semana),
                 campo('Abertos', aberto), campo('Observação (abertos)', obsA),
                 campo('Resolvidos', resolvido), campo('Observação (resolvidos)', obsR),
-                h('div', {class: 'acoes'}, h('button', {type: 'submit'}, 'Salvar par'), cancelar())));
+                h('div', {class: 'acoes'}, cancelar(), salvar('Salvar par'))));
         }
 
         async function inicializar() {
@@ -122,9 +133,9 @@ export const lancamentos = {
             h('div', {class: 'barra-acoes'},
                 h('div', {class: 'filtros'}, campo('Grupo', filtroGrupo), campo('Semana', filtroSemana)),
                 escrita ? h('div', {class: 'acoes'},
-                    h('button', {type: 'button', on: {click: () => editar()}}, 'Novo lançamento'),
-                    h('button', {type: 'button', class: 'secundario', on: {click: par}}, 'Lançamento em par'),
-                    h('button', {type: 'button', class: 'secundario', on: {click: inicializar}}, 'Inicializar semana')) : null),
+                    h('button', {type: 'button', class: 'secundario', on: {click: inicializar}}, icone('rotate-ccw', {classe: 'icone-sm'}), 'Inicializar semana'),
+                    h('button', {type: 'button', class: 'secundario', on: {click: par}}, icone('list-checks', {classe: 'icone-sm'}), 'Lançamento em par'),
+                    botaoNovo('Novo lançamento', () => editar())) : null),
             formulario, lista);
         await carregar();
     }

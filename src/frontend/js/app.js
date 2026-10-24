@@ -71,6 +71,26 @@ el('logout').addEventListener('click', async () => {
     try { await api('/auth/logout', {method: 'POST'}); location.replace('/'); }
     catch (error) { status(error.message); }
 });
+// Tema: automático (sistema) → claro → escuro. A escolha é só preferência visual no navegador.
+const TEMAS = [
+    {valor: null, icone: 'monitor', rotulo: 'automático'},
+    {valor: 'light', icone: 'sun', rotulo: 'claro'},
+    {valor: 'dark', icone: 'moon', rotulo: 'escuro'}
+];
+function aplicarTema(indice) {
+    const tema = TEMAS[indice];
+    if (tema.valor) document.documentElement.dataset.theme = tema.valor;
+    else delete document.documentElement.dataset.theme;
+    try { if (tema.valor) localStorage.setItem('gflow-tema', tema.valor); else localStorage.removeItem('gflow-tema'); }
+    catch { /* storage indisponível: vale só nesta página */ }
+    el('tema').setAttribute('aria-label', `Tema: ${tema.rotulo}. Alternar tema`);
+    el('tema').title = `Tema: ${tema.rotulo}`;
+    el('tema').querySelector('use').setAttribute('href', `/img/icones.svg#${tema.icone}`);
+}
+let temaAtual = Math.max(0, TEMAS.findIndex(t => t.valor === (document.documentElement.dataset.theme ?? null)));
+aplicarTema(temaAtual);
+el('tema').addEventListener('click', () => aplicarTema(temaAtual = (temaAtual + 1) % TEMAS.length));
+
 el('menu').addEventListener('click', () => {
     const aberta = el('sidebar').classList.toggle('aberta');
     el('menu').setAttribute('aria-expanded', String(aberta));
@@ -85,6 +105,7 @@ try {
         el('tenant').append(option);
     }
     el('workspace').hidden = false;
+    el('logout').hidden = false;
     el('nav').hidden = false;
     await selectTenant(tenants[0]?.id ?? null);
 } catch (error) {

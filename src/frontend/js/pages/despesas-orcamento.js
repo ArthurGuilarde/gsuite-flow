@@ -1,7 +1,7 @@
 import {get, put, post, del} from '../api.js';
 import {podeEscrever} from '../state.js';
-import {h, campo, competencia, hojeLocal, mesAtual, moeda, toast, tratarErro} from '../ui.js';
-import {variacao} from './finops-comum.js';
+import {h, campo, carregando, icone, competencia, hojeLocal, mesAtual, moeda, toast, tratarErro} from '../ui.js';
+import {botaoExcluir, cabecalho, kpi, nota, variacao} from './finops-comum.js';
 import {textoOuNulo} from './despesas-comum.js';
 
 // Mesma regra do backend: 11 parcelas de round(v/12, 2) e dezembro com o resto (em centavos, sem erro de ponto flutuante).
@@ -23,7 +23,7 @@ export const despesasOrcamento = {
         async function carregar() {
             const a = Math.round(Number(ano.value));
             if (!(a >= 2000 && a <= 2100)) return;
-            grade.replaceChildren(h('p', {class: 'texto-suave', text: 'Carregando…'}));
+            grade.replaceChildren(carregando(3));
             const referencia = `${a}-12`;
             const [orcamentos, painel] = await Promise.all([
                 get('/api/v1/despesas/orcamentos', {ano: a}, signal),
@@ -34,12 +34,12 @@ export const despesasOrcamento = {
             const totalOrcado = orcamentos.reduce((s, o) => s + o.valor, 0);
             const totalGasto = painel.serie.reduce((s, x) => s + x.total, 0);
             grade.replaceChildren(
-                h('div', {class: 'kpis'},
-                    h('div', {class: 'kpi'}, h('span', {class: 'kpi-rotulo', text: `Orçado em ${a}`}), h('strong', {class: 'kpi-valor', text: moeda(totalOrcado)}), h('span', {class: 'kpi-detalhe', text: `${orcamentos.length} de 12 meses cadastrados`})),
-                    h('div', {class: 'kpi kpi-neutro'}, h('span', {class: 'kpi-rotulo', text: `Run-rate + pontuais em ${a}`}), h('strong', {class: 'kpi-valor', text: moeda(totalGasto)}), h('span', {class: 'kpi-detalhe', text: 'Soma dos 12 meses'})),
-                    h('div', {class: 'kpi kpi-resolvido'}, h('span', {class: 'kpi-rotulo', text: 'Variação (orçado − previsto)'}), h('strong', {class: 'kpi-valor'}, orcamentos.length ? variacao(totalOrcado - totalGasto) : 'Sem orçamento'))),
-                h('div', {class: 'tabela-wrap'}, h('table', {class: 'tabela-orcamento'},
-                    h('thead', {}, h('tr', {}, ['Mês', 'Orçado (R$)', 'Observação', 'Run-rate (recorrente)', 'Pontual', 'Total', 'Variação', escrita ? 'Ações' : null].map(t => t && h('th', {text: t})))),
+                h('div', {class: 'kpis kpis-fin'},
+                    kpi('calculator', `Orçado em ${a}`, moeda(totalOrcado), '', `${orcamentos.length} de 12 meses cadastrados`),
+                    kpi('wallet', `Run-rate + pontuais em ${a}`, moeda(totalGasto), 'kpi-neutro', 'Soma dos 12 meses'),
+                    kpi('trending-up', 'Variação (orçado − previsto)', orcamentos.length ? variacao(totalOrcado - totalGasto) : 'Sem orçamento', 'kpi-resolvido')),
+                h('div', {class: 'tabela-wrap'}, h('table', {class: 'tabela-orcamento tabela-fin'},
+                    cabecalho(['Mês', ['Orçado (R$)', true], 'Observação', ['Run-rate (recorrente)', true], ['Pontual', true], ['Total', true], ['Variação', true], escrita ? ['Ações', true] : null]),
                     h('tbody', {}, Array.from({length: 12}, (_, i) => linhaMes(a, i + 1, porMes, serie))))));
         }
         async function recarregar() { try { await carregar(); } catch (erro) { if (!signal.aborted) tratarErro(erro); } }
@@ -60,16 +60,16 @@ export const despesasOrcamento = {
             async function remover() {
                 try { await del(`/api/v1/despesas/orcamentos/${chave}`); toast(`Orçamento de ${competencia(chave, true)} removido.`, 'success'); await recarregar(); } catch (erro) { tratarErro(erro); }
             }
-            return h('tr', {},
-                h('td', {}, h('strong', {text: competencia(chave, true)})),
+            return h('tr', {class: chave === mesAtual() ? 'mes-atual' : ''},
+                h('td', {}, h('strong', {text: competencia(chave, true)}), chave === mesAtual() ? [' ', h('span', {class: 'badge badge-build', text: 'atual'})] : null),
                 h('td', {}, valor), h('td', {}, obs),
                 h('td', {class: 'num', text: s ? moeda(s.recorrente) : '—'}),
                 h('td', {class: 'num', text: s ? moeda(s.pontual) : '—'}),
                 h('td', {class: 'num', text: s ? moeda(s.total) : '—'}),
-                h('td', {}, o ? variacao(s?.variacao ?? null) : h('span', {class: 'texto-suave', text: 'Sem orçamento'})),
-                escrita ? h('td', {class: 'acoes'},
-                    h('button', {type: 'button', class: 'pequeno', on: {click: salvar}}, 'Salvar'),
-                    o ? h('button', {type: 'button', class: 'perigo pequeno', on: {click: remover}}, 'Remover') : null) : null);
+                h('td', {class: 'num'}, o ? variacao(s?.variacao ?? null) : h('span', {class: 'texto-suave', text: 'Sem orçamento'})),
+                escrita ? h('td', {class: 'acoes'}, h('div', {class: 'acoes'},
+                    h('button', {type: 'button', class: 'pequeno', on: {click: salvar}}, icone('check', {classe: 'icone-sm'}), 'Salvar'),
+                    o ? botaoExcluir(`orçamento de ${competencia(chave, true)}`, remover) : null)) : null);
         }
 
         function formularioAnual() {
@@ -92,19 +92,19 @@ export const despesasOrcamento = {
                     await recarregar();
                 } catch (erro) { tratarErro(erro); }
             }}},
-            h('h2', {text: 'Distribuir orçamento anual ÷ 12'}),
+            h('h2', {class: 'titulo-secao'}, icone('calculator'), 'Distribuir orçamento anual ÷ 12'),
             h('div', {class: 'formulario'},
                 campo('Valor anual (R$)', valorAnual),
                 h('label', {class: 'campo-check'}, sobrescrever, h('span', {text: 'Sobrescrever meses já cadastrados'}))),
             previa,
             h('p', {class: 'texto-suave pequeno-texto', text: 'Sem sobrescrever, meses que já têm orçamento são mantidos. O ano é o selecionado acima.'}),
-            h('div', {class: 'acoes'}, h('button', {type: 'submit'}, 'Distribuir pelos 12 meses')));
+            h('div', {class: 'acoes'}, h('button', {type: 'submit'}, icone('check', {classe: 'icone-sm'}), 'Distribuir pelos 12 meses')));
         }
 
         ano.addEventListener('change', recarregar);
         if (escrita) anual.append(formularioAnual());
         container.replaceChildren(
-            h('p', {class: 'regra-janela', role: 'note'}, h('strong', {text: 'Orçamento é opcional: '}), 'o painel e o inventário funcionam sem ele. Variação = orçado − (run-rate + pontuais); positivo é abaixo do orçado.'),
+            nota(h('strong', {text: 'Orçamento é opcional: '}), 'o painel e o inventário funcionam sem ele. Variação = orçado − (run-rate + pontuais); positivo é abaixo do orçado.'),
             h('div', {class: 'barra-acoes'}, h('div', {class: 'filtros'}, campo('Ano', ano))),
             anual, grade);
         await carregar();

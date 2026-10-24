@@ -1,4 +1,4 @@
-import {h, competencia, data, moeda, tratarErro} from '../ui.js';
+import {h, icone, competencia, data, moeda, tratarErro} from '../ui.js';
 
 export const CATEGORIAS_SUGERIDAS = ['SaaS & Ferramentas', 'Infraestrutura & Cloud', 'Consultoria & Terceiros', 'Licenças & Software', 'Pessoal & Treinamentos', 'Outros Serviços'];
 export const TIPOS_CUSTO = [['RECORRENTE_MENSAL', 'Recorrente mensal'], ['PONTUAL', 'Pontual (valor total)']];
@@ -51,7 +51,7 @@ export const intervaloJanela = (inicio, meses) => `${competencia(inicio)} → ${
 // Diálogo modal com formulário. `montar(fechar)` devolve {corpo, aoEnviar}; aoEnviar pode lançar erro (diálogo permanece aberto).
 export function abrirDialogo(titulo, corpo, rotulo, aoEnviar, perigo = false) {
     const dialogo = h('dialog', {class: 'modal modal-largo', 'aria-label': titulo});
-    const enviar = h('button', {type: 'submit', class: perigo ? 'perigo' : ''}, rotulo);
+    const enviar = h('button', {type: 'submit', class: perigo ? 'perigo' : ''}, icone(perigo ? 'x' : 'check', {classe: 'icone-sm'}), rotulo);
     const form = h('form', {class: 'formulario-modal', on: {submit: async evento => {
         evento.preventDefault();
         enviar.disabled = true;

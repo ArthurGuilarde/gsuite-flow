@@ -1,6 +1,15 @@
 import {get, post, patch, del} from '../api.js';
 import {podeEscrever} from '../state.js';
-import {h, campo, confirmar, estadoVazio, data, toast, tratarErro} from '../ui.js';
+import {h, campo, carregando, confirmar, estadoVazio, data, hojeLocal, icone, toast, tratarErro} from '../ui.js';
+import {botaoEditar, botaoExcluir, botaoNovo, cabecalhoTabela} from './capacidade-comum.js';
+
+// Situação relativa a hoje, só para leitura: sem as duas datas não há classificação.
+function situacaoSemana(s, hoje) {
+    if (!s.data_inicio || !s.data_fim) return null;
+    if (hoje < s.data_inicio) return ['Futura', 'badge-futura'];
+    if (hoje > s.data_fim) return ['Encerrada', 'badge-passada'];
+    return ['Em andamento', 'badge-andamento'];
+}
 
 export const semanas = {
     titulo: 'Semanas',
@@ -11,19 +20,27 @@ export const semanas = {
         const formulario = h('div', {});
 
         async function carregar() {
+            if (!lista.firstChild) lista.replaceChildren(carregando(2));
             const itens = await get('/api/v1/semanas', undefined, signal);
             if (signal.aborted) return;
             if (!itens.length) {
-                lista.replaceChildren(estadoVazio('Nenhuma semana cadastrada', escrita ? 'Crie a primeira semana para começar a lançar.' : 'Peça a quem tem permissão de edição para criar as semanas.'));
+                lista.replaceChildren(estadoVazio({titulo: 'Nenhuma semana cadastrada', icone: 'calendar'},
+                    escrita ? 'Crie a primeira semana para começar a lançar.' : 'Peça a quem tem permissão de edição para criar as semanas.',
+                    escrita ? botaoNovo('Nova semana', () => editar()) : null));
                 return;
             }
+            const hoje = hojeLocal();
             lista.replaceChildren(h('div', {class: 'tabela-wrap'}, h('table', {},
-                h('thead', {}, h('tr', {}, ['Identificação', 'Início', 'Fim', escrita ? 'Ações' : null].map(t => t && h('th', {text: t})))),
-                h('tbody', {}, itens.map(s => h('tr', {},
-                    h('td', {text: s.identificacao}), h('td', {text: data(s.data_inicio)}), h('td', {text: data(s.data_fim)}),
-                    escrita ? h('td', {class: 'acoes'},
-                        h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => editar(s)}}, 'Editar'),
-                        h('button', {type: 'button', class: 'perigo pequeno', on: {click: () => excluir(s)}}, 'Excluir')) : null))))));
+                cabecalhoTabela(['Identificação', 'Início', 'Fim', 'Situação'], escrita),
+                h('tbody', {}, itens.map(s => {
+                    const situacao = situacaoSemana(s, hoje);
+                    return h('tr', {},
+                        h('td', {}, h('strong', {text: s.identificacao})), h('td', {text: data(s.data_inicio)}), h('td', {text: data(s.data_fim)}),
+                        h('td', {}, situacao ? h('span', {class: `badge badge-ponto ${situacao[1]}`, text: situacao[0]}) : h('span', {class: 'texto-suave', text: 'Sem período'})),
+                        escrita ? h('td', {class: 'acoes'},
+                            botaoEditar(`Editar ${s.identificacao}`, () => editar(s)),
+                            botaoExcluir(`Excluir ${s.identificacao}`, () => excluir(s))) : null);
+                })))));
         }
 
         async function recarregar() {
@@ -39,7 +56,7 @@ export const semanas = {
             const identificacao = h('input', {type: 'text', required: true, maxLength: 60, value: s?.identificacao ?? ''});
             const inicio = h('input', {type: 'date', value: s?.data_inicio ?? ''});
             const fim = h('input', {type: 'date', value: s?.data_fim ?? ''});
-            const form = h('form', {class: 'formulario', on: {submit: async evento => {
+            const form = h('form', {class: 'formulario form-cap', on: {submit: async evento => {
                 evento.preventDefault();
                 const corpo = {identificacao: identificacao.value.trim(), data_inicio: inicio.value || null, data_fim: fim.value || null};
                 try {
@@ -49,17 +66,17 @@ export const semanas = {
                     await recarregar();
                 } catch (erro) { tratarErro(erro); }
             }}},
-                h('h2', {text: s ? 'Editar semana' : 'Nova semana'}),
+                h('h2', {}, icone(s ? 'pencil' : 'plus'), s ? 'Editar semana' : 'Nova semana'),
                 campo('Identificação', identificacao), campo('Início', inicio), campo('Fim', fim),
                 h('div', {class: 'acoes'},
-                    h('button', {type: 'submit'}, 'Salvar'),
-                    h('button', {type: 'button', class: 'secundario', on: {click: () => formulario.replaceChildren()}}, 'Cancelar')));
+                    h('button', {type: 'button', class: 'secundario', on: {click: () => formulario.replaceChildren()}}, 'Cancelar'),
+                    h('button', {type: 'submit'}, icone('check', {classe: 'icone-sm'}), 'Salvar')));
             formulario.replaceChildren(h('section', {class: 'cartao'}, form));
             identificacao.focus();
         }
 
         container.replaceChildren(
-            escrita ? h('div', {class: 'barra-acoes'}, h('div', {class: 'acoes'}, h('button', {type: 'button', on: {click: () => editar()}}, 'Nova semana'))) : null,
+            escrita ? h('div', {class: 'barra-acoes'}, h('div', {class: 'acoes'}, botaoNovo('Nova semana', () => editar()))) : null,
             formulario, lista);
         await carregar();
     }

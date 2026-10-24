@@ -1,0 +1,139 @@
+/* ==========================================================================
+   Demandas — lista, triagem, detalhe (linha do tempo) e (o login dev fica em suite.css).
+   Apenas tokens de suite.css; funciona nos temas claro e escuro.
+   ========================================================================== */
+
+/* --- Compartilhado --------------------------------------------------------- */
+.dem-largo{grid-column:1/-1}
+.dem-largo textarea{width:100%;min-width:0;resize:vertical}
+.dem-descricao{white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--fs-md);margin:var(--sp-1) 0}
+.dem-resumo{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:2px 0 0;font-size:var(--fs-sm)}
+.dem-link{color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.dem-link:hover{color:var(--accent-strong);text-decoration:underline;text-underline-offset:3px}
+.dem-meta{display:flex;gap:var(--sp-2) var(--sp-4);flex-wrap:wrap;align-items:center;margin:0}
+.dem-meta-item{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:var(--muted)}
+.dem-titulo-lista{display:flex;align-items:center;gap:var(--sp-2)}
+.dem-barra{align-items:center}
+.dem-barra .campo select{min-width:160px}
+
+/* Badges de prioridade e status (sempre com texto; o ponto é só reforço). */
+.badge-prio-alta,.badge-prio-media,.badge-prio-baixa{padding-left:7px}
+.badge-prio-alta::before,.badge-prio-media::before,.badge-prio-baixa::before{content:"";width:6px;height:6px;border-radius:var(--r-full);background:currentColor}
+.badge-prio-alta{background:var(--danger-soft);color:var(--danger)}
+.badge-prio-media{background:var(--warning-soft);color:var(--warning)}
+.badge-prio-baixa{background:var(--neutral-soft);color:var(--text)}
+.badge-dem-aberta{background:var(--info-soft);color:var(--info)}
+.badge-dem-concluida{background:var(--success-soft);color:var(--success)}
+.badge-dem-cancelada{background:var(--neutral-soft);color:var(--muted)}
+
+/* --- Formulário de nova demanda ---------------------------------------------- */
+.dem-form{grid-template-columns:minmax(0,1fr) 220px;align-items:start}
+.dem-form .cartao-topo{margin-bottom:0}
+.dem-form .campo input,.dem-form .campo select,.dem-form .campo textarea{width:100%;min-width:0}
+.dem-form-acoes{justify-content:flex-end}
+
+/* --- Lista ------------------------------------------------------------------- */
+.dem-filtros{align-items:flex-end}
+.dem-minhas{min-height:38px}
+.dem-tabela .dem-col-titulo{min-width:260px;max-width:520px}
+.dem-tabela .dem-col-data{white-space:nowrap;font-variant-numeric:tabular-nums}
+.dem-tabela .dem-col-data small{display:block;font-size:var(--fs-xs)}
+.dem-tabela .dem-col-acoes{white-space:nowrap}
+.dem-tabela .dem-col-acoes .acoes{flex-wrap:nowrap;justify-content:flex-end}
+.dem-tabela th:last-child{text-align:right}
+.dem-tabela tr.dem-prio-alta td:first-child{box-shadow:inset 3px 0 0 var(--danger-solid)}
+.dem-tabela tr.dem-prio-media td:first-child{box-shadow:inset 3px 0 0 var(--warning-solid)}
+.dem-tabela tr.dem-prio-baixa td:first-child{box-shadow:inset 3px 0 0 var(--border-strong)}
+
+/* --- Triagem ----------------------------------------------------------------- */
+.dem-fila{display:flex;flex-direction:column}
+.dem-triagem-item{border-left-width:3px;margin-bottom:var(--sp-3)}
+.dem-triagem-item.dem-prio-alta{border-left-color:var(--danger-solid)}
+.dem-triagem-item.dem-prio-media{border-left-color:var(--warning-solid)}
+.dem-triagem-item.dem-prio-baixa{border-left-color:var(--border-strong)}
+.dem-triagem-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--sp-3);margin-bottom:var(--sp-2)}
+.dem-triagem-topo strong{font-size:var(--fs-base)}
+.dem-triagem-item .dem-meta{margin-bottom:var(--sp-2)}
+.dem-triagem-acoes{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--sp-3);margin:var(--sp-4) calc(-1*var(--sp-5)) calc(-1*var(--sp-5));padding:var(--sp-3) var(--sp-5);background:var(--surface-2);border-top:1px solid var(--border);border-radius:0 0 var(--r-lg) var(--r-lg)}
+.dem-triagem-destino{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--sp-3);flex:1 1 440px}
+.dem-triagem-grupo{flex:1 1 220px}
+.dem-triagem-acoes .campo select{width:100%}
+.dem-triagem-extra{display:flex;gap:var(--sp-2);align-items:center}
+.dem-cancelar:hover{color:var(--danger);background:var(--danger-soft)}
+
+/* --- Detalhe: cabeçalho ------------------------------------------------------- */
+.dem-voltar{margin:0 0 var(--sp-3);font-size:var(--fs-md)}
+.dem-voltar .dem-link{color:var(--muted)}
+.dem-cabecalho-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-4)}
+.dem-cabecalho-titulo{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:var(--sp-2)}
+.dem-cabecalho-titulo h2{font-size:var(--fs-xl);font-weight:700;letter-spacing:-.02em;overflow-wrap:anywhere}
+.dem-cabecalho-acoes{flex:none}
+.dem-dados{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--sp-3) var(--sp-4);margin:0 0 var(--sp-4);padding:var(--sp-3) 0;border-block:1px solid var(--border)}
+.dem-dado dt{font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.dem-dado dd{margin:2px 0 0;font-size:var(--fs-md);font-weight:500;overflow-wrap:anywhere}
+.dem-descricao-bloco{background:var(--surface-2);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);margin:0}
+
+/* --- Detalhe: linha do tempo -------------------------------------------------- */
+.dem-linha{list-style:none;margin:0;padding:0}
+.dem-item{position:relative;display:flex;align-items:flex-start;gap:var(--sp-3);padding-bottom:var(--sp-4)}
+.dem-item::before{content:"";position:absolute;left:13px;top:30px;bottom:2px;width:2px;background:var(--border)}
+.dem-item:last-child::before{display:none}
+.dem-marca,.dem-avatar{flex:none;width:28px;height:28px;border-radius:var(--r-full);display:grid;place-items:center;position:relative;z-index:1}
+.dem-marca{background:var(--neutral-soft);color:var(--muted)}
+.dem-evento-abertura .dem-marca{background:var(--accent-soft);color:var(--accent-strong)}
+.dem-evento-classificacao .dem-marca{background:var(--info-soft);color:var(--info)}
+.dem-evento-conclusao .dem-marca{background:var(--success-soft);color:var(--success)}
+.dem-evento-reabertura .dem-marca{background:var(--warning-soft);color:var(--warning)}
+.dem-evento-cancelamento .dem-marca{background:var(--danger-soft);color:var(--danger)}
+.dem-evento{margin:0;padding-top:4px;min-width:0;font-size:var(--fs-sm);color:var(--text);overflow-wrap:anywhere}
+.dem-avatar{font-size:var(--fs-xs);font-weight:700;letter-spacing:.02em}
+.dem-comentario{flex:1;min-width:0;max-width:720px;padding:var(--sp-3) var(--sp-4);border:1px solid var(--border);border-radius:var(--r-sm) var(--r-lg) var(--r-lg) var(--r-lg)}
+.dem-do-solicitante .dem-comentario{background:var(--surface-2)}
+.dem-do-solicitante .dem-avatar{background:var(--surface-3);color:var(--text)}
+.dem-da-equipe .dem-comentario{background:var(--accent-soft);border-color:var(--accent-soft-border)}
+.dem-da-equipe .dem-avatar{background:var(--primary);color:var(--on-primary)}
+.dem-comentario-topo{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;font-size:var(--fs-sm);margin-bottom:var(--sp-1)}
+.dem-comentario-topo time{margin-left:auto;font-size:var(--fs-xs)}
+.dem-papel{font-size:var(--fs-xs);font-weight:600;color:var(--muted);border:1px solid var(--border-strong);border-radius:var(--r-full);padding:0 7px;line-height:1.5}
+.dem-da-equipe .dem-papel{color:var(--accent-strong);border-color:var(--accent-soft-border)}
+.dem-comentario-texto{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font-size:var(--fs-md)}
+
+/* --- Detalhe: compositor fixo ------------------------------------------------- */
+.dem-compositor-box{position:sticky;bottom:0;z-index:5;margin:var(--sp-2) calc(-1*var(--sp-5)) calc(-1*var(--sp-5));padding:var(--sp-3) var(--sp-5);background:var(--surface);border-top:1px solid var(--border);border-radius:0 0 var(--r-lg) var(--r-lg)}
+.dem-compositor{display:flex;flex-direction:column;gap:var(--sp-2)}
+.dem-compositor textarea{width:100%;min-width:0;resize:vertical;min-height:72px}
+.dem-compositor-rodape{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.dem-contador-grupo{display:inline-flex;align-items:center;gap:var(--sp-3);font-size:var(--fs-xs)}
+.dem-contador{font-variant-numeric:tabular-nums;color:var(--muted);font-size:var(--fs-xs)}
+.dem-contador-limite{color:var(--warning);font-weight:600}
+.dem-encerrada{display:flex;align-items:center;gap:var(--sp-2);margin:0;color:var(--muted);font-size:var(--fs-md)}
+
+
+/* --- Responsivo --------------------------------------------------------------- */
+@media(max-width:700px){
+  .dem-form{grid-template-columns:1fr}
+  .dem-form-acoes button{width:100%}
+  .dem-filtros{width:100%}
+  .dem-filtros .campo{flex:1 1 140px}
+  .dem-tabela thead{display:none}
+  .dem-tabela,.dem-tabela tbody{display:block}
+  .dem-tabela tr{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--border)}
+  .dem-tabela tr:last-child{border-bottom:0}
+  .dem-tabela td{padding:0;border:0}
+  .dem-tabela tr.dem-prio-alta td:first-child,.dem-tabela tr.dem-prio-media td:first-child,.dem-tabela tr.dem-prio-baixa td:first-child{box-shadow:none}
+  .dem-tabela tr.dem-prio-alta{box-shadow:inset 3px 0 0 var(--danger-solid)}
+  .dem-tabela tr.dem-prio-media{box-shadow:inset 3px 0 0 var(--warning-solid)}
+  .dem-tabela tr.dem-prio-baixa{box-shadow:inset 3px 0 0 var(--border-strong)}
+  .dem-tabela .dem-col-titulo{flex:1 1 100%;min-width:0;max-width:none}
+  .dem-tabela .dem-col-grupo,.dem-tabela .dem-col-data{font-size:var(--fs-sm);color:var(--muted)}
+  .dem-tabela .dem-col-data small{display:inline;margin-left:var(--sp-1)}
+  .dem-tabela .dem-col-acoes{flex:1 1 100%}
+  .dem-tabela .dem-col-acoes .acoes{justify-content:flex-start}
+  .dem-triagem-acoes{flex-direction:column;align-items:stretch}
+  .dem-triagem-destino{flex-basis:auto}
+  .dem-triagem-destino button{width:100%}
+  .dem-triagem-extra{justify-content:flex-end}
+  .dem-cabecalho-acoes{width:100%}
+  .dem-comentario-topo time{margin-left:0;width:100%}
+  .dem-compositor-rodape button{flex:1}
+}

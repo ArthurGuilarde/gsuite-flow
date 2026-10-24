@@ -1,6 +1,6 @@
 import {get, post, put} from '../api.js';
 import {podeEscrever} from '../state.js';
-import {h, campo, confirmar, estadoVazio, data, hojeLocal, minutos, numero, toast, tratarErro} from '../ui.js';
+import {h, campo, carregando, confirmar, estadoVazio, data, hojeLocal, icone, minutos, numero, toast, tratarErro} from '../ui.js';
 
 export const TIPOS = [
     ['SEMANAL', 'Semanal'], ['DIARIA', 'Diária'], ['QUINZENAL', 'Quinzenal (01 e 15)'],
@@ -53,13 +53,13 @@ export function dialogoConclusao(o) {
         const obs = h('textarea', {rows: 3});
         const dialogo = h('dialog', {class: 'modal'},
             h('form', {class: 'formulario-modal', on: {submit: evento => { evento.preventDefault(); dialogo.close('ok'); }}},
-                h('h2', {text: 'Concluir rotina'}),
+                h('h2', {}, 'Concluir rotina'),
                 h('p', {class: 'texto-suave', text: o.titulo}),
                 campo('Tempo real gasto, em minutos (opcional)', real),
                 campo('Observação (opcional)', obs),
                 h('div', {class: 'acoes'},
                     h('button', {type: 'button', class: 'secundario', on: {click: () => dialogo.close('cancel')}}, 'Cancelar'),
-                    h('button', {type: 'submit'}, 'Concluir'))));
+                    h('button', {type: 'submit'}, icone('check', {classe: 'icone-sm'}), 'Concluir'))));
         dialogo.addEventListener('close', () => {
             const ok = dialogo.returnValue === 'ok';
             const valor = real.value === '' ? null : Math.round(Number(real.value));
@@ -79,6 +79,7 @@ function cartaoResumo(rotulo, r) {
     barra.style.width = `${perc}%`;
     return h('div', {class: `resumo-card resumo-${rotulo.toLowerCase()}`},
         h('div', {class: 'resumo-topo'}, h('strong', {text: rotulo}), h('span', {class: 'texto-suave', text: `${numero(r.ocorrencias)} ocorrências`})),
+        h('div', {class: 'resumo-pct', text: `${perc}%`}),
         h('div', {class: 'progresso', role: 'img', 'aria-label': `${perc}% concluído`}, barra),
         h('div', {class: 'resumo-linha'},
             h('span', {class: 'leg-resolvido', text: `${numero(r.concluidas)} concluídas`}),
@@ -97,9 +98,9 @@ export const rotinas = {
         const semanas = await get('/api/v1/semanas', undefined, signal);
         if (signal.aborted) return;
         if (!semanas.length) {
-            container.replaceChildren(estadoVazio('Nenhuma semana cadastrada',
+            container.replaceChildren(estadoVazio({titulo: 'Nenhuma semana cadastrada', icone: 'calendar'},
                 'Rotinas são acompanhadas por semana. Cadastre uma semana em Configuração.',
-                h('a', {class: 'botao', href: '#/config/semanas', text: 'Configurar semanas'})));
+                h('a', {class: 'botao', href: '#/config/semanas'}, icone('calendar', {classe: 'icone-sm'}), 'Configurar semanas')));
             return;
         }
         let semana = null, pendencias = null;
@@ -135,8 +136,8 @@ export const rotinas = {
             if (extra) await alterar(o, 'CONCLUIDA', extra);
         }
         const botaoAcao = o => !escrita ? null : (o.status === 'CONCLUIDA'
-            ? h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => alterar(o, 'PENDENTE')}}, 'Reabrir')
-            : h('button', {type: 'button', class: 'pequeno', on: {click: () => concluir(o)}}, 'Concluir'));
+            ? h('button', {type: 'button', class: 'secundario pequeno botao-acao', 'aria-label': `Reabrir: ${o.titulo}`, on: {click: () => alterar(o, 'PENDENTE')}}, icone('rotate-ccw', {classe: 'icone-sm'}), 'Reabrir')
+            : h('button', {type: 'button', class: 'pequeno botao-acao', 'aria-label': `Concluir: ${o.titulo}`, on: {click: () => concluir(o)}}, icone('check', {classe: 'icone-sm'}), 'Concluir'));
 
         function desenharResumo() {
             const r = semana.resumo;
@@ -150,17 +151,25 @@ export const rotinas = {
                 h('span', {class: 'pendencia-titulo'}, tituloComLink(o.titulo, o.link_recurso), ' ', badgeCategoria(o.categoria)),
                 botaoAcao(o));
         }
+        const expandidos = new Set();
         function blocoPendencia(titulo, itens, atrasada) {
+            const LIMITE = 6;
+            const aberto = expandidos.has(titulo);
+            const visiveis = aberto ? itens : itens.slice(0, LIMITE);
             return h('div', {class: 'pendencias-bloco'},
-                h('h3', {}, titulo, ' ', h('span', {class: `badge situacao ${atrasada ? 'situacao-atrasada' : 'situacao-hoje'}`, text: numero(itens.length)})),
-                itens.length ? h('ul', {class: 'lista-limpa'}, itens.map(o => linhaPendencia(o, atrasada)))
-                    : h('p', {class: 'texto-suave', text: atrasada ? 'Nenhuma rotina atrasada.' : 'Nada vence hoje.'}));
+                h('h3', {}, titulo, h('span', {class: `badge situacao ${atrasada ? 'situacao-atrasada' : 'situacao-hoje'}`, text: numero(itens.length)})),
+                itens.length ? h('ul', {class: 'lista-limpa'}, visiveis.map(o => linhaPendencia(o, atrasada)))
+                    : h('p', {class: 'texto-suave', text: atrasada ? 'Nenhuma rotina atrasada.' : 'Nada vence hoje.'}),
+                itens.length > LIMITE ? h('button', {type: 'button', class: 'secundario pequeno', 'aria-expanded': String(aberto), on: {click: () => {
+                    if (aberto) expandidos.delete(titulo); else expandidos.add(titulo);
+                    desenharPendencias();
+                }}}, aberto ? 'Mostrar menos' : `Mostrar todas (${numero(itens.length)})`) : null);
         }
         function desenharPendencias() {
             const total = pendencias.vence_hoje.length + pendencias.atrasadas.length;
             areaPendencias.classList.toggle('pendencias-ok', total === 0);
             areaPendencias.replaceChildren(
-                h('div', {class: 'cartao-topo'}, h('h2', {text: 'Não deixe nada para trás'}),
+                h('div', {class: 'cartao-topo'}, h('h2', {}, icone(total ? 'triangle-alert' : 'circle-check'), 'Não deixe nada para trás'),
                     h('span', {class: 'texto-suave', text: total ? `${numero(total)} em aberto, de qualquer semana` : 'Tudo em dia.'})),
                 h('div', {class: 'grade-2'},
                     blocoPendencia('Vence hoje', pendencias.vence_hoje, false),
@@ -188,12 +197,13 @@ export const rotinas = {
                 && (!filtros.status || o.status === filtros.status)
                 && (!filtros.tipo || o.tipo_agendamento === filtros.tipo));
             const topo = h('div', {class: 'cartao-topo'},
-                h('h2', {text: 'Checklist da semana'}),
+                h('h2', {}, icone('list-checks'), 'Checklist da semana'),
                 h('div', {class: 'filtros'}, campo('Categoria', filtroCategoria), campo('Status', filtroStatus), campo('Tipo', filtroTipo)));
             if (!itens.length) {
-                areaLista.replaceChildren(topo, h('p', {class: 'texto-suave', text: semana.ocorrencias.length
-                    ? 'Nenhuma ocorrência para estes filtros.'
-                    : 'Esta semana não tem rotinas previstas. Cadastre rotinas no catálogo.'}));
+                areaLista.replaceChildren(topo, semana.ocorrencias.length
+                    ? estadoVazio({titulo: 'Nenhuma ocorrência', icone: 'list-filter'}, 'Nenhuma ocorrência para estes filtros.')
+                    : estadoVazio({titulo: 'Semana sem rotinas', icone: 'repeat'}, 'Esta semana não tem rotinas previstas. Cadastre rotinas no catálogo.',
+                        h('a', {class: 'botao', href: '#/config/rotinas'}, 'Abrir catálogo', icone('chevron-right', {classe: 'icone-sm'}))));
                 return;
             }
             const grupos = new Map();
@@ -215,7 +225,8 @@ export const rotinas = {
             }));
         }
 
-        async function carregar() {
+        async function carregar(esqueleto = false) {
+            if (esqueleto) { areaResumo.replaceChildren(carregando(1)); areaLista.replaceChildren(carregando(2)); }
             try {
                 const [s, p] = await Promise.all([
                     get('/api/v1/rotinas/semana', {semana_id: seletor.value, hoje}, signal),
@@ -240,15 +251,15 @@ export const rotinas = {
             } catch (erro) { tratarErro(erro); }
         }
 
-        seletor.addEventListener('change', carregar);
+        seletor.addEventListener('change', () => carregar(true));
         container.replaceChildren(
             h('div', {class: 'barra-acoes'},
                 campo('Semana', seletor),
                 h('div', {class: 'acoes'},
-                    h('a', {class: 'botao secundario', href: '#/config/rotinas', text: escrita ? 'Gerenciar catálogo' : 'Ver catálogo'}),
-                    escrita ? h('button', {type: 'button', class: 'secundario', on: {click: reiniciar}}, 'Reiniciar semana') : null)),
+                    escrita ? h('button', {type: 'button', class: 'secundario perigo', on: {click: reiniciar}}, icone('rotate-ccw', {classe: 'icone-sm'}), 'Reiniciar semana') : null,
+                    h('a', {class: 'botao secundario', href: '#/config/rotinas'}, icone('list-todo', {classe: 'icone-sm'}), escrita ? 'Gerenciar catálogo' : 'Ver catálogo'))),
             areaResumo, areaPendencias, areaLista);
-        await carregar();
+        await carregar(true);
     }
 };
 

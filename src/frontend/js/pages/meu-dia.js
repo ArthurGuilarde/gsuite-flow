@@ -1,6 +1,6 @@
 import {del, get, patch, post, put} from '../api.js';
 import {podeEscrever} from '../state.js';
-import {h, confirmar, data as formatarData, hojeLocal, minutos, moeda, numero, toast, tratarErro} from '../ui.js';
+import {h, carregando, confirmar, data as formatarData, hojeLocal, icone, minutos, moeda, numero, toast, tratarErro} from '../ui.js';
 import {badgeCategoria, dialogoConclusao, tituloComLink} from './rotinas.js';
 
 const API = '/api/v1/planner';
@@ -30,6 +30,7 @@ export const meuDia = {
         let view = null;
         let historico = [];
         let filtro = 'TODAS';
+        let todasRotinas = false;
         let refocar = null;
         let sequencia = 0;
         let timer = null;
@@ -177,25 +178,25 @@ export const meuDia = {
         const prioLista = h('ul', {class: 'lista-limpa md-itens'});
         const prioInput = h('input', {type: 'text', maxLength: 500, placeholder: 'Adicionar prioridade e pressionar Enter', 'aria-label': 'Nova prioridade'});
         const prioForm = h('form', {class: 'md-add nao-imprimir', on: {submit: evento => { evento.preventDefault(); adicionar('PRIORIDADE', prioInput); }}},
-            prioInput, h('button', {type: 'submit'}, 'Adicionar'));
+            prioInput, h('button', {type: 'submit'}, icone('plus', {classe: 'icone-sm'}), 'Adicionar'));
         const prioNota = h('p', {class: 'texto-suave md-nota'});
         const prioContagem = h('span', {class: 'badge md-contagem'});
         const prioridades = h('section', {class: 'cartao md-prioridades', 'aria-labelledby': 'md-t-prio'},
-            h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-prio', text: 'Prioridades'}), prioContagem),
+            h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-prio'}, icone('list-checks'), 'Prioridades'), prioContagem),
             prioLista, prioNota, escrita ? prioForm : null);
 
         const tarLista = h('ul', {class: 'lista-limpa md-itens'});
         const tarInput = h('input', {type: 'text', maxLength: 500, placeholder: 'Nova tarefa e pressionar Enter', 'aria-label': 'Nova tarefa'});
         const tarForm = h('form', {class: 'md-add nao-imprimir', on: {submit: evento => { evento.preventDefault(); adicionar('TAREFA', tarInput); }}},
-            tarInput, h('button', {type: 'submit'}, 'Adicionar'));
+            tarInput, h('button', {type: 'submit'}, icone('plus', {classe: 'icone-sm'}), 'Adicionar'));
         const tarContagem = h('span', {class: 'badge md-contagem'});
         const tarFiltros = h('div', {class: 'chips nao-imprimir', role: 'group', 'aria-label': 'Filtrar tarefas'});
         const tarefas = h('section', {class: 'cartao md-tarefas', 'aria-labelledby': 'md-t-tar'},
-            h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-tar', text: 'Tarefas'}), tarContagem), tarFiltros,
+            h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-tar'}, icone('list-todo'), 'Tarefas'), tarContagem), tarFiltros,
             escrita ? tarForm : null, tarLista);
 
         const notas = h('section', {class: 'cartao md-notas-cartao', 'aria-labelledby': 'md-t-notas'},
-            h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-notas', text: 'Notas'}), indicador()), notasArea);
+            h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-notas'}, icone('message-square'), 'Notas'), indicador()), notasArea);
 
         const pendentes = h('section', {class: 'cartao md-pendentes', 'aria-labelledby': 'md-t-pend', hidden: true});
         const lembretes = h('section', {class: 'cartao md-lembretes', 'aria-labelledby': 'md-t-lemb'});
@@ -217,13 +218,13 @@ export const meuDia = {
             cabecalho.replaceChildren(
                 h('div', {class: 'md-nav nao-imprimir'},
                     h('div', {class: 'md-nav-botoes'},
-                        h('button', {type: 'button', class: 'secundario', 'aria-label': 'Dia anterior', on: {click: () => irPara(somarDias(dataAtual, -1))}}, '‹'),
+                        h('button', {type: 'button', class: 'secundario so-icone', title: 'Dia anterior', 'aria-label': 'Dia anterior', on: {click: () => irPara(somarDias(dataAtual, -1))}}, icone('chevron-left')),
                         h('button', {type: 'button', class: 'secundario', disabled: dataAtual === hoje, on: {click: () => irPara(hoje)}}, 'Hoje'),
-                        h('button', {type: 'button', class: 'secundario', 'aria-label': 'Próximo dia', on: {click: () => irPara(somarDias(dataAtual, 1))}}, '›')),
+                        h('button', {type: 'button', class: 'secundario so-icone', title: 'Próximo dia', 'aria-label': 'Próximo dia', on: {click: () => irPara(somarDias(dataAtual, 1))}}, icone('chevron-right'))),
                     dataInput,
                     h('div', {class: 'acoes md-nav-extra'},
-                        h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => window.print()}}, 'Imprimir'),
-                        escrita && view.dia.id ? h('button', {type: 'button', class: 'secundario pequeno', on: {click: limparDia}}, 'Limpar dia') : null)),
+                        h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => window.print()}}, icone('receipt', {classe: 'icone-sm'}), 'Imprimir'),
+                        escrita && view.dia.id ? h('button', {type: 'button', class: 'secundario perigo pequeno', on: {click: limparDia}}, icone('trash-2', {classe: 'icone-sm'}), 'Limpar dia') : null)),
                 h('div', {class: 'md-titulo-dia'},
                     h('h2', {class: 'md-data', text: `${diaSemana(dataAtual)}, ${formatarData(dataAtual)}`}), marca),
                 h('div', {class: 'md-progresso'},
@@ -232,9 +233,9 @@ export const meuDia = {
                         h('strong', {text: total ? `${numero(r.itens_concluidos)} de ${numero(total)}` : 'Dia livre'}),
                         h('span', {class: 'texto-suave', text: total ? ' itens concluídos' : ' — defina o foco e as prioridades'}),
                         r.rotinas_pendentes ? chip(`${numero(r.rotinas_pendentes)} ${r.rotinas_pendentes === 1 ? 'rotina' : 'rotinas'} por fazer`, 'situacao-hoje') : null,
-                        renov ? chip(`${numero(renov)} ${renov === 1 ? 'renovação' : 'renovações'}`, 'nivel-urgente') : null)),
+                        renov ? chip(`${numero(renov)} ${renov === 1 ? 'renovação' : 'renovações'}`, 'situacao-atrasada') : null)),
                 h('div', {class: 'md-foco'},
-                    h('label', {class: 'md-foco-rotulo', htmlFor: 'md-foco', text: 'Foco do dia'}),
+                    h('label', {class: 'md-foco-rotulo', htmlFor: 'md-foco'}, icone('lightbulb', {classe: 'icone-sm'}), 'Foco do dia'),
                     focoInput, indicador()),
                 ...(escrita ? [] : [h('p', {class: 'texto-suave md-nota', text: 'Somente leitura: seu perfil não tem permissão de escrita neste espaço.'})]));
         }
@@ -258,12 +259,12 @@ export const meuDia = {
             const cheio = view.prioridades.length >= LIMITE_PRIORIDADES;
             const acoes = !escrita ? null : h('div', {class: 'md-item-acoes nao-imprimir'},
                 prioridade
-                    ? h('button', {type: 'button', class: 'secundario pequeno md-icone', title: 'Mover para tarefas', 'aria-label': `Mover para tarefas: ${item.texto}`,
-                        on: {click: () => alterarItem(item, {tipo: 'TAREFA'})}}, '↓')
-                    : h('button', {type: 'button', class: 'secundario pequeno md-icone', disabled: cheio, title: cheio ? 'Já há 3 prioridades' : 'Promover a prioridade',
-                        'aria-label': `Promover a prioridade: ${item.texto}`, on: {click: () => alterarItem(item, {tipo: 'PRIORIDADE'})}}, '★'),
-                h('button', {type: 'button', class: 'secundario pequeno md-icone', title: 'Remover', 'aria-label': `Remover: ${item.texto}`,
-                    on: {click: () => removerItem(item)}}, '✕'));
+                    ? h('button', {type: 'button', class: 'fantasma pequeno so-icone md-icone', title: 'Mover para tarefas', 'aria-label': `Mover para tarefas: ${item.texto}`,
+                        on: {click: () => alterarItem(item, {tipo: 'TAREFA'})}}, icone('list-todo', {classe: 'icone-sm'}))
+                    : h('button', {type: 'button', class: 'fantasma pequeno so-icone md-icone', disabled: cheio, title: cheio ? 'Já há 3 prioridades' : 'Promover a prioridade',
+                        'aria-label': `Promover a prioridade: ${item.texto}`, on: {click: () => alterarItem(item, {tipo: 'PRIORIDADE'})}}, icone('trending-up', {classe: 'icone-sm'})),
+                h('button', {type: 'button', class: 'fantasma pequeno so-icone md-icone', title: 'Remover', 'aria-label': `Remover: ${item.texto}`,
+                    on: {click: () => removerItem(item)}}, icone('x', {classe: 'icone-sm'})));
             return h('li', {class: `md-item${item.concluido ? ' concluido' : ''}${prioridade ? ' md-item-prioridade' : ''}`},
                 prioridade ? h('span', {class: 'md-numero', 'aria-hidden': 'true', text: indice + 1}) : null,
                 caixa, texto, acoes);
@@ -306,11 +307,13 @@ export const meuDia = {
             if (!lista.length) { pendentes.replaceChildren(); return; }
             const contador = h('span', {class: 'texto-suave pequeno-texto'});
             const botaoTrazer = h('button', {type: 'button', class: 'pequeno', on: {click: () => trazer([...selecionados])}});
-            const botaoDescartar = h('button', {type: 'button', class: 'secundario pequeno', on: {click: descartar}}, 'Descartar selecionados');
+            const rotuloTrazer = h('span');
+            botaoTrazer.append(icone('plus', {classe: 'icone-sm'}), rotuloTrazer);
+            const botaoDescartar = h('button', {type: 'button', class: 'secundario pequeno', on: {click: descartar}}, icone('trash-2', {classe: 'icone-sm'}), 'Descartar selecionados');
             const atualizar = () => {
                 const n = selecionados.size;
                 contador.textContent = n ? `${n} selecionado${n === 1 ? '' : 's'}` : 'Marque os itens que deseja trazer';
-                botaoTrazer.textContent = n ? `Trazer selecionados (${n})` : 'Trazer selecionados';
+                rotuloTrazer.textContent = n ? `Trazer selecionados (${n})` : 'Trazer selecionados';
                 botaoTrazer.disabled = !n;
                 botaoDescartar.disabled = !n;
             };
@@ -325,7 +328,7 @@ export const meuDia = {
             });
             atualizar();
             pendentes.replaceChildren(
-                h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-pend', text: 'Pendentes de dias anteriores'}),
+                h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-pend'}, icone('inbox'), 'Pendentes de dias anteriores'),
                     h('span', {class: 'badge situacao situacao-hoje', text: numero(lista.length)})),
                 h('ul', {class: 'lista-limpa md-itens'}, linhas),
                 h('div', {class: 'acoes md-pendentes-acoes nao-imprimir'}, escrita ? [botaoTrazer,
@@ -341,36 +344,39 @@ export const meuDia = {
                         atrasada ? `Atrasada desde ${diaMes(o.data_prevista)}` : 'Vence hoje',
                         o.semana_identificacao, o.esforco_estimado_min ? `previsto ${minutos(o.esforco_estimado_min)}` : null
                     ].filter(Boolean).join(' · ')})),
-                escrita ? h('button', {type: 'button', class: 'pequeno nao-imprimir', on: {click: () => concluirRotina(o)}}, 'Concluir') : null);
+                escrita ? h('button', {type: 'button', class: 'pequeno nao-imprimir', 'aria-label': `Concluir rotina: ${o.titulo}`, on: {click: () => concluirRotina(o)}}, icone('check', {classe: 'icone-sm'}), 'Concluir') : null);
         }
 
         function desenharLembretes() {
             const {vence_hoje: venceHoje, atrasadas} = view.rotinas;
             const rotinas = [...atrasadas.map(o => linhaRotina(o, true)), ...venceHoje.map(o => linhaRotina(o, false))];
             const nRotinas = rotinas.length;
+            const LIMITE_ROTINAS = 6;
+            const visiveis = todasRotinas ? rotinas : rotinas.slice(0, LIMITE_ROTINAS);
             const renov = view.renovacoes;
             lembretes.classList.toggle('md-ok', !nRotinas && !renov.length);
             lembretes.classList.toggle('md-alerta', atrasadas.length > 0 || renov.length > 0);
             lembretes.replaceChildren(
-                h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-lemb', text: 'Lembretes'})),
+                h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-lemb'}, icone('lightbulb'), 'Lembretes')),
                 h('div', {class: 'md-bloco'},
-                    h('h3', {}, 'Rotinas ', h('span', {class: `badge situacao ${atrasadas.length ? 'situacao-atrasada' : nRotinas ? 'situacao-hoje' : 'situacao-concluida'}`, text: numero(nRotinas)})),
-                    nRotinas ? h('ul', {class: 'lista-limpa'}, rotinas) : h('p', {class: 'texto-suave', text: 'Nenhuma rotina vence hoje nem está atrasada.'}),
-                    h('a', {class: 'md-link nao-imprimir', href: '#/rotinas', text: 'Abrir checklist de rotinas'})),
+                    h('h3', {}, icone('repeat', {classe: 'icone-sm'}), 'Rotinas', h('span', {class: `badge situacao ${atrasadas.length ? 'situacao-atrasada' : nRotinas ? 'situacao-hoje' : 'situacao-concluida'}`, text: numero(nRotinas)})),
+                    nRotinas ? h('ul', {class: 'lista-limpa'}, visiveis) : h('p', {class: 'texto-suave', text: 'Nenhuma rotina vence hoje nem está atrasada.'}),
+                    nRotinas > LIMITE_ROTINAS ? h('button', {type: 'button', class: 'secundario pequeno nao-imprimir md-mais', 'aria-expanded': String(todasRotinas), on: {click: () => { todasRotinas = !todasRotinas; desenharLembretes(); }}}, todasRotinas ? 'Mostrar menos' : `Mostrar todas (${numero(nRotinas)})`) : null,
+                    h('a', {class: 'md-link nao-imprimir', href: '#/rotinas'}, 'Abrir checklist de rotinas', icone('chevron-right', {classe: 'icone-sm'}))),
                 h('div', {class: 'md-bloco'},
-                    h('h3', {}, 'Contratos renovando em até 30 dias ', h('span', {class: `badge ${renov.length ? 'nivel-urgente' : 'situacao-concluida'}`, text: numero(renov.length)})),
+                    h('h3', {}, icone('receipt', {classe: 'icone-sm'}), 'Contratos renovando em até 30 dias', h('span', {class: `badge ${renov.length ? 'situacao-atrasada' : 'situacao-concluida'}`, text: numero(renov.length)})),
                     renov.length ? h('ul', {class: 'lista-limpa'}, renov.map(r => h('li', {class: 'md-lembrete'},
                         h('div', {class: 'md-lembrete-corpo'},
                             h('strong', {text: r.nome}),
                             h('div', {class: 'texto-suave pequeno-texto', text: [r.fornecedor, `${formatarData(r.data_renovacao)} (${textoDias(r.dias)})`].filter(Boolean).join(' · ')})),
                         h('span', {class: 'md-valor', text: `${moeda(r.custo_mensal)}/mês`}))))
                         : h('p', {class: 'texto-suave', text: 'Nenhum contrato renova nos próximos 30 dias.'}),
-                    h('a', {class: 'md-link nao-imprimir', href: '#/despesas/inventario', text: 'Abrir inventário de despesas'})));
+                    h('a', {class: 'md-link nao-imprimir', href: '#/despesas/inventario'}, 'Abrir inventário de despesas', icone('chevron-right', {classe: 'icone-sm'}))));
         }
 
         function desenharHistorico() {
             hist.replaceChildren(
-                h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-hist', text: `Histórico (${DIAS_HISTORICO} dias)`})),
+                h('div', {class: 'cartao-topo'}, h('h2', {id: 'md-t-hist'}, icone('calendar'), `Histórico (${DIAS_HISTORICO} dias)`)),
                 historico.length ? h('ul', {class: 'lista-limpa md-hist-lista'}, historico.map(d => h('li', {},
                     h('button', {type: 'button', class: `md-hist-item${d.data === dataAtual ? ' ativo' : ''}`, 'aria-current': d.data === dataAtual ? 'date' : null,
                         on: {click: () => irPara(d.data)}},
@@ -407,6 +413,7 @@ export const meuDia = {
             }
         }
 
+        cabecalho.replaceChildren(carregando(1));
         container.replaceChildren(
             cabecalho,
             h('div', {class: 'md-grade'},

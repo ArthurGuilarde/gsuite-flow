@@ -1,4 +1,4 @@
-import {h, moeda, competencia} from '../ui.js';
+import {h, icone, moeda, competencia} from '../ui.js';
 
 export const TIPOS = [['MELHORIA', 'Melhoria'], ['AUTOMACAO', 'Automação'], ['OTIMIZACAO_CUSTO', 'Otimização de custo']];
 export const ROTULO_TIPO = Object.fromEntries(TIPOS);
@@ -43,3 +43,23 @@ export const janela = (inicio, fim) => `${competencia(inicio)} → ${competencia
 export function selo(rotulo, valor, classe = '') {
     return h('div', {class: `mini ${classe}`}, h('span', {class: 'mini-rotulo', text: rotulo}), h('strong', {class: 'mini-valor', text: valor}));
 }
+
+// Nota informativa (regra de negócio) com ícone; `filhos` pode misturar texto, <strong> e links.
+export const nota = (...filhos) => h('p', {class: 'regra-janela', role: 'note'}, icone('info'), h('span', {}, filhos));
+
+// Cartão de indicador. `valor` pode ser texto ou Node; `nomeIcone` vem do sprite.
+export function kpi(nomeIcone, rotulo, valor, classe = '', ...detalhes) {
+    return h('div', {class: `kpi kpi-fin ${classe}`.trim()},
+        h('span', {class: 'kpi-rotulo'}, icone(nomeIcone, {classe: 'icone-sm'}), rotulo),
+        h('strong', {class: 'kpi-valor'}, valor),
+        detalhes.filter(Boolean).map(d => h('span', {class: 'kpi-detalhe', text: d})));
+}
+
+// <thead>: cada coluna é "Texto", ["Texto", true] (numérica, à direita) ou falsa (omitida).
+export const cabecalho = colunas => h('thead', {}, h('tr', {}, colunas.map(c => c && (Array.isArray(c)
+    ? h('th', {class: c[1] ? 'num' : '', text: c[0]})
+    : h('th', {text: c})))));
+
+// Botões só-ícone para linhas de tabela (aria-label obrigatório).
+export const botaoEditar = (alvo, aoClicar) => h('button', {type: 'button', class: 'secundario so-icone pequeno', 'aria-label': `Editar ${alvo}`, title: 'Editar', on: {click: aoClicar}}, icone('pencil', {classe: 'icone-sm'}));
+export const botaoExcluir = (alvo, aoClicar) => h('button', {type: 'button', class: 'secundario perigo so-icone pequeno', 'aria-label': `Excluir ${alvo}`, title: 'Excluir', on: {click: aoClicar}}, icone('trash-2', {classe: 'icone-sm'}));

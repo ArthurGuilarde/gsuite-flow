@@ -22,10 +22,14 @@ def page():
     names = ", ".join(escape(key) for key in USERS)
     return HTMLResponse(
         f'<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1"><title>Login local</title>'
-        '<link rel="stylesheet" href="/css/suite.css"></head><body><main><h1>Desenvolvimento local</h1>'
-        f"<p>Identidades fictícias: {names}. Este acesso não usa Authentik ou Core.</p>"
-        '<form id="dev-login"><label>Usuário <select id="dev-user"></select></label>'
+        '<meta name="viewport" content="width=device-width,initial-scale=1"><title>Login local · GFlow</title>'
+        '<link rel="stylesheet" href="/css/suite.css"></head>'
+        '<body><main class="login"><div class="login-marca"><span class="marca-logo" aria-hidden="true">G</span>'
+        "<span>GFlow</span></div>"
+        '<span class="login-selo">Somente desenvolvimento</span>'
+        "<h1>Desenvolvimento local</h1>"
+        f'<p class="login-aviso">Identidades fictícias: {names}. Este acesso não usa Authentik ou Core.</p>'
+        '<form id="dev-login"><label class="campo"><span>Usuário</span><select id="dev-user"></select></label>'
         '<button type="submit">Entrar</button></form><p id="dev-status" role="status"></p>'
         '<script src="/js/dev-login.js" type="module"></script></main></body></html>'
     )

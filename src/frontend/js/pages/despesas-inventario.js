@@ -1,7 +1,7 @@
 import {get, post, patch, del} from '../api.js';
 import {podeEscrever} from '../state.js';
-import {h, campo, confirmar, estadoVazio, competencia, data, hojeLocal, mesAtual, moeda, toast, tratarErro} from '../ui.js';
-import {opcao} from './finops-comum.js';
+import {h, campo, carregando, confirmar, estadoVazio, icone, competencia, data, hojeLocal, mesAtual, moeda, toast, tratarErro} from '../ui.js';
+import {botaoEditar, botaoExcluir, cabecalho, nota, opcao} from './finops-comum.js';
 import {
     CATEGORIAS_SUGERIDAS, JANELA_PADRAO, ROTULO_TIPO_CUSTO, STATUS_DESPESA, STATUS_EDITAVEIS, TIPOS_CUSTO, URL_INICIATIVAS,
     abrirDialogo, badgeDespesa, intervaloJanela, linhaValor, moedaMes, numeroOuNulo, seloOrigem, situacaoRenovacao, textoOuNulo
@@ -73,19 +73,20 @@ export const despesasInventario = {
         function desenhar() {
             const urgentes = itens.filter(i => situacaoRenovacao(i)?.classe === 'ren-urgente');
             avisoRenovacao.replaceChildren(...(urgentes.length ? [
-                h('p', {class: 'aviso-renovacao', role: 'status'}, h('strong', {text: `${urgentes.length} ${urgentes.length === 1 ? 'contrato renova' : 'contratos renovam'} em até 30 dias: `}),
-                    urgentes.map(u => u.nome).join(', '), '. ', h('a', {href: '#/despesas', text: 'Ver alertas no painel'}))] : []));
+                h('p', {class: 'aviso-renovacao', role: 'status'}, icone('triangle-alert'), h('span', {}, h('strong', {text: `${urgentes.length} ${urgentes.length === 1 ? 'contrato renova' : 'contratos renovam'} em até 30 dias: `}),
+                    urgentes.map(u => u.nome).join(', '), '. ', h('a', {href: '#/despesas', text: 'Ver alertas no painel'})))] : []));
             if (!itens.length) {
-                lista.replaceChildren(estadoVazio('Nenhuma despesa cadastrada', escrita ? 'Cadastre os contratos e assinaturas para auditar, acompanhar renovações e capturar saving.' : 'Peça a quem tem permissão de edição para cadastrar as despesas.'));
+                lista.replaceChildren(estadoVazio({titulo: 'Nenhuma despesa cadastrada', icone: 'package'}, escrita ? 'Cadastre os contratos e assinaturas para auditar, acompanhar renovações e capturar saving.' : 'Peça a quem tem permissão de edição para cadastrar as despesas.',
+                    escrita ? h('button', {type: 'button', on: {click: () => editar()}}, icone('plus', {classe: 'icone-sm'}), 'Nova despesa') : null));
                 return;
             }
             const visiveis = filtrar();
-            if (!visiveis.length) { lista.replaceChildren(estadoVazio('Nada encontrado', 'Nenhuma despesa corresponde aos filtros.')); return; }
+            if (!visiveis.length) { lista.replaceChildren(estadoVazio({titulo: 'Nada encontrado', icone: 'search'}, 'Nenhuma despesa corresponde aos filtros.')); return; }
             const total = visiveis.filter(i => i.tipo_custo === 'RECORRENTE_MENSAL' && i.status_auditoria !== 'CANCELADO').reduce((s, i) => s + i.custo_mensal_considerado, 0);
             lista.replaceChildren(
                 h('p', {class: 'texto-suave pequeno-texto', text: `${visiveis.length} ${visiveis.length === 1 ? 'despesa' : 'despesas'} · recorrente mensal ativo na seleção: ${moedaMes(total)}`}),
-                h('div', {class: 'tabela-wrap'}, h('table', {class: 'tabela-despesas'},
-                    h('thead', {}, h('tr', {}, ['Despesa', 'Status', 'Custo considerado', 'Custo anual', 'Renovação', escrita ? 'Ações' : null].map(t => t && h('th', {text: t})))),
+                h('div', {class: 'tabela-wrap'}, h('table', {class: 'tabela-despesas tabela-fin'},
+                    cabecalho(['Despesa', 'Status', ['Custo considerado', true], ['Custo anual', true], 'Renovação', escrita ? ['Ações', true] : null]),
                     h('tbody', {}, visiveis.map(linha)))));
         }
 
@@ -95,10 +96,10 @@ export const despesasInventario = {
             const ativa = d.status_auditoria !== 'CANCELADO' && d.status_auditoria !== 'RENEGOCIADO';
             return h('tr', {class: d.status_auditoria === 'CANCELADO' ? 'inativa' : ''},
                 h('td', {},
-                    h('span', {class: 'rotina-titulo', text: d.nome}),
+                    h('span', {class: 'item-titulo', text: d.nome}),
                     h('div', {class: 'texto-suave pequeno-texto', text: [d.fornecedor, d.categoria, ROTULO_TIPO_CUSTO[d.tipo_custo]].filter(Boolean).join(' · ')}),
                     d.fonte_nome ? h('div', {class: 'texto-suave pequeno-texto', text: `Fonte de custo: ${d.fonte_nome}`}) : null,
-                    d.iniciativas?.length ? h('ul', {class: 'lista-limpa iniciativas-vinculadas'}, d.iniciativas.map(i => h('li', {},
+                    d.iniciativas?.length ? h('ul', {class: 'iniciativas-vinculadas'}, d.iniciativas.map(i => h('li', {},
                         h('a', {href: URL_INICIATIVAS, text: i.titulo}), ` · ${STATUS_DESPESA_INICIATIVA[i.status] ?? i.status} · ${moedaMes(i.valor_mensal)}`))) : null),
                 h('td', {}, badgeDespesa(d.status_auditoria),
                     d.mes_acao ? h('div', {class: 'texto-suave pequeno-texto', text: `desde ${competencia(d.mes_acao)}`}) : null),
@@ -108,14 +109,13 @@ export const despesasInventario = {
                             d.valor_anterior !== null && d.valor_anterior !== undefined ? h('div', {class: 'texto-suave pequeno-texto', text: `antes ${moedaMes(d.valor_anterior)}`}) : null]),
                 h('td', {class: 'num', text: moeda(d.custo_anual)}),
                 h('td', {}, d.data_renovacao ? [data(d.data_renovacao), ren ? h('div', {}, h('span', {class: `badge ${ren.classe}`, text: ren.texto})) : null] : h('span', {class: 'texto-suave', text: '—'})),
-                escrita ? h('td', {class: 'acoes'},
+                escrita ? h('td', {class: 'acoes'}, h('div', {class: 'acoes'},
                     ativa ? [
-                        h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => editar(d)}}, 'Editar'),
-                        h('button', {type: 'button', class: 'perigo pequeno', on: {click: () => cancelar(d)}}, 'Cancelar'),
-                        !pontual ? h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => renegociar(d)}}, 'Renegociar') : null]
-                        : [h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => editar(d)}}, 'Editar'),
-                            h('button', {type: 'button', class: 'pequeno', on: {click: () => reverter(d)}}, 'Reverter')],
-                    h('button', {type: 'button', class: 'perigo pequeno', on: {click: () => excluir(d)}}, 'Excluir')) : null);
+                        !pontual ? h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => renegociar(d)}}, icone('badge-dollar-sign', {classe: 'icone-sm'}), 'Renegociar') : null,
+                        h('button', {type: 'button', class: 'secundario perigo pequeno', on: {click: () => cancelar(d)}}, icone('x', {classe: 'icone-sm'}), 'Cancelar')]
+                        : h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => reverter(d)}}, icone('rotate-ccw', {classe: 'icone-sm'}), 'Reverter'),
+                    botaoEditar(`despesa ${d.nome}`, () => editar(d)),
+                    botaoExcluir(`despesa ${d.nome}`, () => excluir(d)))) : null);
         }
 
         async function excluir(d) {
@@ -240,7 +240,7 @@ export const despesasInventario = {
                 } catch (erro) { tratarErro(erro); }
             }}},
             h('h2', {text: d ? 'Editar despesa' : 'Nova despesa'}),
-            travada ? h('p', {class: 'regra-janela', role: 'note'}, `Despesa ${STATUS_DESPESA[d.status_auditoria][0].toLowerCase()}: valor, tipo e status só mudam depois de reverter a ação.`) : null,
+            travada ? nota(`Despesa ${STATUS_DESPESA[d.status_auditoria][0].toLowerCase()}: valor, tipo e status só mudam depois de reverter a ação.`) : null,
             h('div', {class: 'formulario'},
                 campo('Nome', nome), campo('Fornecedor', fornecedor), h('label', {class: 'campo'}, h('span', {text: 'Categoria'}), categoria, lista_),
                 campo('Tipo de custo', tipo), h('label', {class: 'campo'}, rotuloValor, valor), campo('Status de auditoria', status),
@@ -249,8 +249,8 @@ export const despesasInventario = {
             dicaValor,
             h('div', {class: 'formulario'}, campo('Observações', observacoes)),
             h('div', {class: 'acoes'},
-                h('button', {type: 'submit'}, 'Salvar'),
-                h('button', {type: 'button', class: 'secundario', on: {click: () => formulario.replaceChildren()}}, 'Cancelar')));
+                h('button', {type: 'button', class: 'secundario', on: {click: () => formulario.replaceChildren()}}, 'Cancelar'),
+                h('button', {type: 'submit'}, icone('check', {classe: 'icone-sm'}), 'Salvar')));
             formulario.replaceChildren(h('section', {class: 'cartao'}, form));
             nome.focus();
             formulario.scrollIntoView({block: 'nearest'});
@@ -261,9 +261,10 @@ export const despesasInventario = {
         container.replaceChildren(
             avisoRenovacao,
             h('div', {class: 'barra-acoes'},
-                h('div', {class: 'acoes'}, escrita ? h('button', {type: 'button', on: {click: () => editar()}}, 'Nova despesa') : null),
+                h('div', {class: 'acoes'}, escrita ? h('button', {type: 'button', on: {click: () => editar()}}, icone('plus', {classe: 'icone-sm'}), 'Nova despesa') : null),
                 h('div', {class: 'filtros'}, campo('Status', fStatus), campo('Categoria', fCategoria), campo('Busca', fBusca))),
             formulario, lista);
+        lista.replaceChildren(carregando(2));
         fontes = await get('/api/v1/finops/fontes', undefined, signal).catch(() => []);
         await carregar();
     }

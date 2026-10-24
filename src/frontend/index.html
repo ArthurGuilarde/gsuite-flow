@@ -3,47 +3,54 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>GFlow</title>
   <link rel="icon" href="data:,">
+  <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <script src="/js/tema.js"></script>
   <link rel="stylesheet" href="/css/suite.css">
+  <link rel="stylesheet" href="/css/capacidade.css">
+  <link rel="stylesheet" href="/css/financeiro.css">
+  <link rel="stylesheet" href="/css/demandas.css">
 </head>
 <body>
   <div class="app">
     <aside id="sidebar" class="sidebar" aria-label="Navegação principal">
-      <div class="marca">GFlow</div>
+      <a class="marca" href="#/"><span class="marca-logo" aria-hidden="true">G</span><span>GFlow<small>Indicadores de engenharia</small></span></a>
       <nav id="nav" class="nav" hidden>
-        <a href="#/meu-dia" data-rota="/meu-dia">Meu Dia</a>
-        <a href="#/" data-rota="/">Painel</a>
-        <a href="#/rotinas" data-rota="/rotinas">Rotinas</a>
-        <a href="#/lancamentos" data-rota="/lancamentos">Lançamentos</a>
-        <div class="nav-secao">FinOps</div>
-        <a href="#/finops" data-rota="/finops">Painel FinOps</a>
-        <a href="#/finops/iniciativas" data-rota="/finops/iniciativas">Iniciativas</a>
-        <a href="#/finops/faturas" data-rota="/finops/faturas">Faturas</a>
-        <div class="nav-secao">Despesas</div>
-        <a href="#/despesas" data-rota="/despesas">Painel de despesas</a>
-        <a href="#/despesas/inventario" data-rota="/despesas/inventario">Inventário</a>
-        <a href="#/despesas/orcamento" data-rota="/despesas/orcamento">Orçamento</a>
+        <a href="#/meu-dia" data-rota="/meu-dia"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#sun"/></svg>Meu Dia</a>
+        <a href="#/" data-rota="/"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#layout-dashboard"/></svg>Painel</a>
+        <a href="#/rotinas" data-rota="/rotinas"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#repeat"/></svg>Rotinas</a>
+        <a href="#/lancamentos" data-rota="/lancamentos"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#list-checks"/></svg>Lançamentos</a>
         <div class="nav-secao">Demandas</div>
-        <a href="#/demandas" data-rota="/demandas">Demandas</a>
-        <a href="#/demandas/triagem" data-rota="/demandas/triagem" data-escrita hidden>Triagem</a>
+        <a href="#/demandas" data-rota="/demandas"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#inbox"/></svg>Demandas</a>
+        <a href="#/demandas/triagem" data-rota="/demandas/triagem" data-escrita hidden><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#list-filter"/></svg>Triagem</a>
+        <div class="nav-secao">FinOps</div>
+        <a href="#/finops" data-rota="/finops"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#trending-up"/></svg>Painel FinOps</a>
+        <a href="#/finops/iniciativas" data-rota="/finops/iniciativas"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#lightbulb"/></svg>Iniciativas</a>
+        <a href="#/finops/faturas" data-rota="/finops/faturas"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#receipt"/></svg>Faturas</a>
+        <div class="nav-secao">Despesas</div>
+        <a href="#/despesas" data-rota="/despesas"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#wallet"/></svg>Painel de despesas</a>
+        <a href="#/despesas/inventario" data-rota="/despesas/inventario"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#package"/></svg>Inventário</a>
+        <a href="#/despesas/orcamento" data-rota="/despesas/orcamento"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#calculator"/></svg>Orçamento</a>
         <div class="nav-secao">Configuração</div>
-        <a href="#/config/grupos" data-rota="/config/grupos">Grupos</a>
-        <a href="#/config/semanas" data-rota="/config/semanas">Semanas</a>
-        <a href="#/config/rotinas" data-rota="/config/rotinas">Catálogo de rotinas</a>
-        <a href="#/config/perfis" data-rota="/config/perfis">Perfis de custo/hora</a>
+        <a href="#/config/grupos" data-rota="/config/grupos"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#users"/></svg>Grupos</a>
+        <a href="#/config/semanas" data-rota="/config/semanas"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#calendar"/></svg>Semanas</a>
+        <a href="#/config/rotinas" data-rota="/config/rotinas"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#list-todo"/></svg>Catálogo de rotinas</a>
+        <a href="#/config/perfis" data-rota="/config/perfis"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#badge-dollar-sign"/></svg>Perfis de custo/hora</a>
       </nav>
     </aside>
     <div class="principal">
       <header class="topbar">
-        <button id="menu" class="icone-botao" type="button" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+        <button id="menu" class="icone-botao fantasma so-icone" type="button" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#menu"/></svg></button>
         <div class="titulos">
           <h1 id="pagina-titulo">GFlow</h1>
           <p id="pagina-subtitulo" class="subtitulo"></p>
         </div>
-        <div id="workspace" class="toolbar" hidden>
-          <label class="campo-inline">Espaço <select id="tenant"></select></label>
-          <button id="logout" type="button" class="secundario">Sair</button>
+        <div class="toolbar">
+          <label id="workspace" class="campo-inline" hidden><svg class="icone icone-sm" aria-hidden="true"><use href="/img/icones.svg#building-2"/></svg><span>Espaço</span> <select id="tenant" aria-label="Espaço de trabalho"></select></label>
+          <button id="tema" type="button" class="fantasma so-icone" aria-label="Tema: automático"><svg class="icone" aria-hidden="true"><use href="/img/icones.svg#monitor"/></svg></button>
+          <button id="logout" type="button" class="secundario" hidden><svg class="icone icone-sm" aria-hidden="true"><use href="/img/icones.svg#log-out"/></svg>Sair</button>
         </div>
       </header>
       <main class="conteudo-area">
