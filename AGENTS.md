@@ -3,7 +3,7 @@ Leia primeiro docs/project-context.md e docs/adrs/MASTER-ADR.md. Use docs/develo
 
 ## Invariantes
 - Em integrated/production, a identidade pertence ao Authentik e memberships/entitlements pertencem ao Core.
-- O dev isolado suporta explicitamente SQLite e identidades locais fictícias pelo adaptador local; nunca o habilite em produção. O perfil dev desliga o rate limit; integrated/production o mantêm.
+- O dev isolado suporta explicitamente SQLite e identidades locais fictícias pelo adaptador local; nunca o habilite em produção. O perfil dev desliga o rate limit; integrated/production o mantêm. `python -m src seed --profile dev` popula o espaço A com dados fictícios de `src/backend/dev_seed.json`; mantenha-os fictícios e nunca o habilite fora do dev.
 - Nunca crie senhas locais reais, admin global, billing, impersonation nem acesso direto ao banco do Core. As fixtures de dev local não têm senhas.
 - Um tenant é um espaço de trabalho compartilhado, nunca uma aplicação ou um usuário.
 - Exija access e read/write antes de abrir uma transação de tenant. Negue em caso de falha do Core.

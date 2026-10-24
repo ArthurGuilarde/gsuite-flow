@@ -27,6 +27,14 @@ python -m src migrate --profile dev
 python -m src check --profile dev
 ```
 
+Popule o espaço A (`editor-a`/`reader-a`) com dados fictícios de demonstração para validar todas as telas:
+
+```bash
+python -m src seed --profile dev
+```
+
+O `seed` aplica as migrações e insere o retrato de `src/backend/dev_seed.json` (grupos, semanas, lançamentos, rotinas, planner, demandas com histórico, FinOps e despesas), deslocado para a semana e o mês atuais. Ele só roda no perfil dev com SQLite e é idempotente: se o espaço A já tiver dados, não altera nada. Para recomeçar, pare o servidor, apague `.local/dev.sqlite3` e rode o comando de novo.
+
 Acesse `http://127.0.0.1:8000`. A CLI ignora URLs de banco/Auth dos outros perfis e usa `.local/dev.sqlite3` e `.local/session.key`. As fixtures `editor-a`, `reader-a` e `editor-b` não têm senhas e não representam usuários reais. O perfil dev desliga o rate limit (`RATE_LIMIT_ENABLED=false`, exibido como `rate_limit=off` no `check`); integrated e production mantêm o limite.
 
 **Validação:** `check` verifica banco e revisão de migração. Abra `/health/live` e `/health/ready`. SQLite e fixtures permitem teste funcional local, mas não validam RLS do PostgreSQL.

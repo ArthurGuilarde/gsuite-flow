@@ -5,6 +5,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+# Commands the CLI refuses outside the dev profile; only the dev example is documented.
+DEV_ONLY_COMMANDS = {"seed"}
 
 
 def main():
@@ -39,6 +41,8 @@ def main():
                 missing.append(example)
     for profile in profiles:
         for command in commands:
+            if command in DEV_ONLY_COMMANDS and profile != "dev":
+                continue
             example = (
                 f"python -m src --profile {profile}"
                 if command == "serve"

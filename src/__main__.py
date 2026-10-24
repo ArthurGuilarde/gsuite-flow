@@ -109,7 +109,7 @@ def check_external():
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run or operate a Guilarde application")
-    parser.add_argument("command", nargs="?", default="serve", choices=["serve", "migrate", "check"])
+    parser.add_argument("command", nargs="?", default="serve", choices=["serve", "migrate", "check", "seed"])
     parser.add_argument("--profile", choices=["dev", "integrated", "production"], required=True)
     parser.add_argument("--env-file", default=".env")
     parser.add_argument("--host")
@@ -121,6 +121,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main():
     parser = build_parser()
     args = parser.parse_args()
+    if args.command == "seed" and args.profile != "dev":
+        parser.error("seed is only available in the dev profile")
     try:
         profile = configure_profile(args, parser)
         from src.backend.core.config import safe_public_address, settings
@@ -168,6 +170,11 @@ def main():
             verify_database()
             print(f"Banco e migrações: OK ({profile}).")
             check_external()
+        elif args.command == "seed":
+            from src.backend.dev_seed import seed
+
+            migrate()
+            print(seed())
         else:
             import uvicorn
 

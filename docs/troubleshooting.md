@@ -8,6 +8,8 @@
 | Login local não aparece | Confirme `--profile dev` e abra o endereço loopback informado pela configuração de inicialização. |
 | HTTP 429 "Muitas requisições" | Em dev o rate limit fica desligado; confira `rate_limit=off` em `python -m src check --profile dev`. Em integrated/production, aguarde o `Retry-After` ou ajuste `RATE_LIMIT_LOGIN_PER_MINUTE`/`RATE_LIMIT_API_PER_MINUTE`. |
 | CSRF rejeitado em dev | Use `127.0.0.1` ou `localhost` consistentemente na mesma porta e atualize a página para obter nova sessão. |
+| `seed` responde "Seed ignorado" | O espaço A já tem dados; o seed não mistura nem sobrescreve. Pare o servidor, apague `.local/dev.sqlite3` e rode `python -m src seed --profile dev`. |
+| `seed is only available in the dev profile` | O seed de demonstração só existe no perfil dev com SQLite; nunca popule integrated/production com ele. |
 | SQLite não aparece no caminho esperado | O perfil dev usa `.local/dev.sqlite3`; defina `DEV_DATABASE_URL` para mudar o arquivo. Ele ignora `DATABASE_URL` e `MIGRATION_DATABASE_URL`. |
 | Banco sem revisão atual | Execute `python -m src migrate --profile <perfil>` usando o arquivo de ambiente correto. Em production, migre com `.env.production.migration`. |
 | Migração production não tem credencial owner | Inclua `MIGRATION_DATABASE_URL` no arquivo `.env.production.migration`; use role owner diferente da role runtime e o mesmo alvo PostgreSQL. |

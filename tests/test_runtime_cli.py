@@ -54,6 +54,22 @@ def test_dev_migrate_and_check_use_sqlite_without_starting_server(tmp_path):
     assert "invalid" not in checked.stdout.lower()
 
 
+def test_seed_runs_only_in_dev_and_is_idempotent(tmp_path):
+    env = os.environ.copy()
+    env.update(DEV_DATABASE_URL=f"sqlite:///{tmp_path / 'seed.sqlite3'}")
+
+    seeded = run_cli("seed", "--profile", "dev", env=env)
+    assert seeded.returncode == 0, seeded.stderr
+    assert "Seed conclu" in seeded.stdout
+    again = run_cli("seed", "--profile", "dev", env=env)
+    assert again.returncode == 0, again.stderr
+    assert "Seed ignorado" in again.stdout
+
+    refused = run_cli("seed", "--profile", "integrated", env=env)
+    assert refused.returncode != 0
+    assert "seed is only available in the dev profile" in refused.stderr
+
+
 def test_cli_requires_an_explicit_profile():
     result = run_cli(env=os.environ.copy())
     assert result.returncode != 0
