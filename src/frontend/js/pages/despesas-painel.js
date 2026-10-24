@@ -97,7 +97,7 @@ export const despesasPainel = {
         container.replaceChildren(
             h('div', {class: 'barra-acoes nao-imprimir'},
                 h('div', {class: 'filtros'}, campo('Mês de referência', ref)),
-                h('button', {type: 'button', class: 'secundario', on: {click: () => window.print()}}, 'Exportar PDF')),
+                h('button', {type: 'button', class: 'secundario', on: {click: () => window.print()}}, icone('printer', {classe: 'icone-sm'}), 'Exportar PDF')),
             area);
         await carregar();
     }

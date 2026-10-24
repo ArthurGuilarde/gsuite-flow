@@ -62,8 +62,8 @@ export const demandasTriagem = {
                     h('label', {class: 'campo'}, h('span', {text: 'Prioridade'}), prioridade),
                     h('button', {type: 'submit'}, icone('check', {classe: 'icone-sm'}), 'Classificar')),
                 h('div', {class: 'dem-triagem-extra'},
-                    h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => acao(d, 'concluir', 'Demanda concluída.')}}, icone('circle-check', {classe: 'icone-sm'}), 'Concluir'),
-                    h('button', {type: 'button', class: 'fantasma pequeno dem-cancelar', on: {click: async () => {
+                    h('button', {type: 'button', class: 'secundario', on: {click: () => acao(d, 'concluir', 'Demanda concluída.')}}, icone('circle-check', {classe: 'icone-sm'}), 'Concluir'),
+                    h('button', {type: 'button', class: 'fantasma dem-cancelar', on: {click: async () => {
                         if (!await confirmar(`Cancelar a demanda "${d.titulo}"?`, 'Cancelar demanda')) return;
                         await acao(d, 'cancelar', 'Demanda cancelada.');
                     }}}, icone('x', {classe: 'icone-sm'}), 'Cancelar')));
@@ -72,7 +72,7 @@ export const demandasTriagem = {
                     h('a', {href: `#/demandas/${d.id}`, class: 'dem-link'}, h('strong', {text: d.titulo})), badgePrioridade(d.prioridade)),
                 h('div', {class: 'dem-meta'},
                     meta('users', d.solicitante_sub, 'Solicitante'),
-                    meta('calendar', idade(d.created_at), dataHora(d.created_at))),
+                    meta('clock', idade(d.created_at), dataHora(d.created_at))),
                 d.descricao ? h('p', {class: 'dem-descricao dem-resumo', text: d.descricao}) : null,
                 form);
         }

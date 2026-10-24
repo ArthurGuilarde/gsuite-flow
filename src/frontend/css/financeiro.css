@@ -41,6 +41,7 @@ a.item-titulo{color:var(--accent-strong)}
 /* --- Gráficos (SVG por classes) ------------------------------------------- */
 .grafico-wrap{overflow-x:auto}
 .grafico{display:block;width:100%;min-width:520px;height:auto}
+@media(max-width:600px){.grafico{min-width:0}}
 .g-grade{stroke:var(--border);stroke-width:1}
 .g-base{stroke:var(--border-strong)}
 .g-eixo{font-size:11px;fill:var(--muted);font-variant-numeric:tabular-nums}

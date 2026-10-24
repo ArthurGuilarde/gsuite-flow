@@ -65,7 +65,7 @@ export const demandaDetalhe = {
         const contagem = h('span', {class: 'badge', title: 'Comentários', text: '…'});
         let atual = null;
 
-        const voltar = h('p', {class: 'dem-voltar'}, h('a', {href: '#/demandas', class: 'dem-link'}, icone('chevron-left', {classe: 'icone-sm'}), 'Voltar para Demandas'));
+        const voltar = h('p', {class: 'dem-voltar'}, h('a', {href: '#/demandas', class: 'dem-link'}, icone('arrow-left', {classe: 'icone-sm'}), 'Voltar para Demandas'));
 
         function naoEncontrada() {
             container.replaceChildren(voltar, estadoVazio({titulo: 'Demanda não encontrada', icone: 'search'},

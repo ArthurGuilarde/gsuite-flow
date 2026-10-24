@@ -223,7 +223,7 @@ export const meuDia = {
                         h('button', {type: 'button', class: 'secundario so-icone', title: 'Próximo dia', 'aria-label': 'Próximo dia', on: {click: () => irPara(somarDias(dataAtual, 1))}}, icone('chevron-right'))),
                     dataInput,
                     h('div', {class: 'acoes md-nav-extra'},
-                        h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => window.print()}}, icone('receipt', {classe: 'icone-sm'}), 'Imprimir'),
+                        h('button', {type: 'button', class: 'secundario pequeno', on: {click: () => window.print()}}, icone('printer', {classe: 'icone-sm'}), 'Imprimir'),
                         escrita && view.dia.id ? h('button', {type: 'button', class: 'secundario perigo pequeno', on: {click: limparDia}}, icone('trash-2', {classe: 'icone-sm'}), 'Limpar dia') : null)),
                 h('div', {class: 'md-titulo-dia'},
                     h('h2', {class: 'md-data', text: `${diaSemana(dataAtual)}, ${formatarData(dataAtual)}`}), marca),

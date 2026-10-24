@@ -193,7 +193,7 @@ export const painel = {
             h('div', {class: 'barra-acoes nao-imprimir'},
                 campo('Período', seletor),
                 h('div', {class: 'acoes'},
-                    h('button', {type: 'button', class: 'secundario', on: {click: () => window.print()}}, icone('receipt', {classe: 'icone-sm'}), 'Exportar PDF'),
+                    h('button', {type: 'button', class: 'secundario', on: {click: () => window.print()}}, icone('printer', {classe: 'icone-sm'}), 'Exportar PDF'),
                     h('button', {type: 'button', class: 'secundario', on: {click: () => {
                         if (!dados) return;
                         const nome = (dados.periodo || 'todas').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'painel';

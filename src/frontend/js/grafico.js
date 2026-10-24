@@ -26,9 +26,13 @@ function tetoBonito(max) {
     return 10 * exp;
 }
 
-const L = 720, A = 280, MARGEM = {e: 56, d: 12, t: 12, b: 34};
+// Abaixo de 600px o gráfico usa geometria compacta para caber na tela sem rolagem e manter o texto legível.
+const compacto = () => typeof matchMedia === 'function' && matchMedia('(max-width: 600px)').matches;
+let L = 720, A = 280;
+const MARGEM = {e: 56, d: 12, t: 12, b: 34};
 
 function moldura(rotulo, teto, extras) {
+    [L, A] = compacto() ? [400, 260] : [720, 280];
     const w = L - MARGEM.e - MARGEM.d, h = A - MARGEM.t - MARGEM.b;
     const raiz = svg('svg', {class: 'grafico', viewBox: `0 0 ${L} ${A}`, role: 'img', 'aria-label': rotulo, preserveAspectRatio: 'xMidYMid meet'});
     const y = valor => MARGEM.t + h - (valor / teto) * h;
@@ -41,7 +45,7 @@ function moldura(rotulo, teto, extras) {
     return {raiz, w, h, y};
 }
 
-const passo = n => (n > 18 ? Math.ceil(n / 12) : 1);
+const passo = n => Math.max(1, Math.ceil(n / (compacto() ? 6 : n > 18 ? 12 : Math.max(n, 1))));
 
 function rotulosX(raiz, serie, x0, larg) {
     const p = passo(serie.length);
@@ -65,7 +69,7 @@ export function graficoSaving(serie) {
         if (direto > 0) grupo.append(svg('rect', {class: `g-direto${proj}`, x: cx - barra / 2, y: topoDireto, width: barra, height: y(0) - topoDireto, rx: horas > 0 ? 0 : 2}));
         if (horas > 0) grupo.append(svg('rect', {class: `g-horas${proj}`, x: cx - barra / 2, y: topoHoras, width: barra, height: topoDireto - topoHoras, rx: 2}));
         // Total acima da barra quando há poucos meses (evita poluir séries longas).
-        if (total <= 12 && direto + horas > 0) grupo.append(texto(moedaCurta(direto + horas), {class: 'g-valor', x: cx, y: topoHoras - 5, 'text-anchor': 'middle'}));
+        if (total <= (compacto() ? 6 : 12) && direto + horas > 0) grupo.append(texto(moedaCurta(direto + horas), {class: 'g-valor', x: cx, y: topoHoras - 5, 'text-anchor': 'middle'}));
         // Área de toque transparente para o tooltip nativo mesmo em barras zeradas.
         grupo.append(svg('rect', {class: 'g-alvo', x: cx - larg / 2, y: MARGEM.t, width: larg, height: A - MARGEM.t - MARGEM.b}));
         raiz.append(grupo);
