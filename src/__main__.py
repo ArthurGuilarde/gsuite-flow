@@ -31,6 +31,8 @@ def configure_profile(args, parser):
             COOKIE_SECURE="false",
             SESSION_COOKIE="guilarde_dev_session",
             LOG_FORMAT="console",
+            # Dev é loopback e de uso individual; o limite por IP só atrapalhava recargas e automações locais.
+            RATE_LIMIT_ENABLED="false",
         )
         os.environ["HOST"] = args.host or "127.0.0.1"
         display_host = f"[{os.environ['HOST']}]" if ":" in os.environ["HOST"] else os.environ["HOST"]
@@ -156,7 +158,8 @@ def main():
         print(
             "Configuração: "
             f"perfil={profile} auth={settings.AUTH_MODE} endereço={safe_public_address(settings.PUBLIC_URL)} "
-            f"banco={safe_database_identifier(target_database_url)}"
+            f"banco={safe_database_identifier(target_database_url)} "
+            f"rate_limit={'on' if settings.RATE_LIMIT_ENABLED else 'off'}"
         )
         if args.command == "migrate":
             migrate()

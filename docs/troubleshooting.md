@@ -6,6 +6,7 @@
 | Arquivo `--env-file` não encontrado | Confira o caminho relativo à pasta atual ou use caminho absoluto. |
 | Porta ocupada | Escolha uma porta livre, por exemplo `python -m src --profile dev --port 8010`. |
 | Login local não aparece | Confirme `--profile dev` e abra o endereço loopback informado pela configuração de inicialização. |
+| HTTP 429 "Muitas requisições" | Em dev o rate limit fica desligado; confira `rate_limit=off` em `python -m src check --profile dev`. Em integrated/production, aguarde o `Retry-After` ou ajuste `RATE_LIMIT_LOGIN_PER_MINUTE`/`RATE_LIMIT_API_PER_MINUTE`. |
 | CSRF rejeitado em dev | Use `127.0.0.1` ou `localhost` consistentemente na mesma porta e atualize a página para obter nova sessão. |
 | SQLite não aparece no caminho esperado | O perfil dev usa `.local/dev.sqlite3`; defina `DEV_DATABASE_URL` para mudar o arquivo. Ele ignora `DATABASE_URL` e `MIGRATION_DATABASE_URL`. |
 | Banco sem revisão atual | Execute `python -m src migrate --profile <perfil>` usando o arquivo de ambiente correto. Em production, migre com `.env.production.migration`. |

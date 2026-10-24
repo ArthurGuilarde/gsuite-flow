@@ -27,7 +27,7 @@ python -m src migrate --profile dev
 python -m src check --profile dev
 ```
 
-Acesse `http://127.0.0.1:8000`. A CLI ignora URLs de banco/Auth dos outros perfis e usa `.local/dev.sqlite3` e `.local/session.key`. As fixtures `editor-a`, `reader-a` e `editor-b` não têm senhas e não representam usuários reais.
+Acesse `http://127.0.0.1:8000`. A CLI ignora URLs de banco/Auth dos outros perfis e usa `.local/dev.sqlite3` e `.local/session.key`. As fixtures `editor-a`, `reader-a` e `editor-b` não têm senhas e não representam usuários reais. O perfil dev desliga o rate limit (`RATE_LIMIT_ENABLED=false`, exibido como `rate_limit=off` no `check`); integrated e production mantêm o limite.
 
 **Validação:** `check` verifica banco e revisão de migração. Abra `/health/live` e `/health/ready`. SQLite e fixtures permitem teste funcional local, mas não validam RLS do PostgreSQL.
 

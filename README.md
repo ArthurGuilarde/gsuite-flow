@@ -8,7 +8,7 @@ Indicadores de engenharia da suíte Guilarde: capacidade BUILD ≥ 70% / RUN ≤
 
 | Cenário | Quando usar | Pré-requisitos | Comandos principais | Guia completo |
 |---|---|---|---|---|
-| `dev` | Interface e trabalho local sem serviços externos | Python 3.12+ e dependências instaladas | `python -m src --profile dev --reload` | [Operações — dev](docs/operations.md#dev-isolado) |
+| `dev` | Interface e trabalho local sem serviços externos e sem rate limit | Python 3.12+ e dependências instaladas | `python -m src --profile dev --reload` | [Operações — dev](docs/operations.md#dev-isolado) |
 | `integrated` | Integrar com PostgreSQL, Authentik e Core reais | PostgreSQL, OIDC/Core configurados e runtime/migration roles | `python -m src migrate --profile integrated`<br>`python -m src check --profile integrated`<br>`python -m src --profile integrated` | [Operações — integrated](docs/operations.md#integrated) |
 | `production` | Operar release com configurações e segredos de produção | PostgreSQL, Authentik/Core e arquivos runtime/migration separados | `python -m src migrate --profile production --env-file .env.production.migration`<br>`python -m src check --profile production --env-file .env.production`<br>`python -m src --profile production --env-file .env.production` | [Deploy](docs/deploy.md) e [operações](docs/operations.md#production) |
 

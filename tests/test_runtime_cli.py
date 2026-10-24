@@ -50,6 +50,7 @@ def test_dev_migrate_and_check_use_sqlite_without_starting_server(tmp_path):
     assert "uvicorn" not in checked.stdout.lower()
     assert "perfil=dev auth=local" in checked.stdout
     assert f"sqlite:///{db_path.name}" in checked.stdout
+    assert "rate_limit=off" in checked.stdout
     assert "invalid" not in checked.stdout.lower()
 
 
